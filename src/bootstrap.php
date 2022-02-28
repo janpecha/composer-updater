@@ -23,7 +23,7 @@ $composerFile = $console->getOption('composer-file')
 
 $console->output('JP\\Composer Updater')
 	->nl()
-	->output('---------------')
+	->output('-------------------')
 	->nl();
 
 if (!$console->hasParameters()) {
@@ -37,10 +37,9 @@ if (!$console->hasParameters()) {
 		->output('    --composer-file=<path>       Path to composer.json file (optional)')
 		->nl()
 		->output('    --composer-bin=<executable>  Composer executable (optional, default: `composer`)')
+		->nl()
 		->nl();
 }
-
-$console->nl();
 
 
 if ($composerFile === NULL) {

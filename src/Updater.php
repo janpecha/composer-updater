@@ -61,10 +61,14 @@
 		private function updateLibrary(): bool
 		{
 			$this->tryComposerInstall();
+
+			$this->console->output('Updating library dependencies:')->nl();
 			$outdated = $this->getOutdated();
 
 			if (count($outdated) === 0) {
-				$this->console->output('Nothing to update.', \CzProject\PhpCli\Colors::YELLOW);
+				$this->console->output(' - ', \CzProject\PhpCli\Colors::GRAY);
+				$this->console->output('nothing to update.', \CzProject\PhpCli\Colors::YELLOW);
+				$this->console->nl();
 				return TRUE;
 			}
 
@@ -121,6 +125,7 @@
 				$this->console->nl();
 			}
 
+			$this->console->nl();
 			return TRUE;
 		}
 
@@ -150,6 +155,7 @@
 		private function tryComposerInstall(): void
 		{
 			if (!$this->composerFile->existsLockFile()) {
+				$this->console->output('Missing composer.lock, running of `composer install`.', \CzProject\PhpCli\Colors::YELLOW)->nl();
 				$result = $this->runner->run([
 					$this->composerExecutable,
 					'install',
