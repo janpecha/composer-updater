@@ -169,6 +169,8 @@
 				$result = $this->runner->run([
 					$this->composerExecutable,
 					'install',
+					'--no-interaction',
+					'--prefer-dist',
 				]);
 
 				if (!$result->isOk()) {
