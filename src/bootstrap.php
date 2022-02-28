@@ -38,6 +38,8 @@ if (!$console->hasParameters()) {
 		->nl()
 		->output('    --composer-bin=<executable>  Composer executable (optional, default: `composer`)')
 		->nl()
+		->output('    --dry-run                    Enable dry-run mode')
+		->nl()
 		->nl();
 }
 
@@ -76,6 +78,10 @@ $updater = new Updater(
 		->getValue(),
 	$console
 );
-$ok = $updater->run();
+$ok = $updater->run(
+	$console->getOption('dry-run', 'bool')
+		->setDefaultValue(FALSE)
+		->getValue()
+);
 
 exit($ok ? 0 : 1);

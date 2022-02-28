@@ -23,6 +23,7 @@ Usage:
 Options:
     --composer-file=<path>       Path to composer.json file (optional)
     --composer-bin=<executable>  Composer executable (optional, default: `composer`)
+    --dry-run                    Enable dry-run mode
 ```
 
 

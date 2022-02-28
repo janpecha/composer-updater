@@ -40,13 +40,17 @@
 		}
 
 
-		public function run(): bool
+		public function run(bool $dryRun): bool
 		{
+			if ($dryRun) {
+				$this->console->output('Dry-run mode')->nl();
+			}
+
 			$projectType = $this->composerFile->getType();
 			$result = FALSE;
 
 			if ($projectType === 'library') {
-				$result = $this->updateLibrary();
+				$result = $this->updateLibrary($dryRun);
 
 			} else {
 				throw new \RuntimeException('Unknow "type: ' . $projectType . '" in composer.json.');
@@ -58,9 +62,9 @@
 		}
 
 
-		private function updateLibrary(): bool
+		private function updateLibrary(bool $dryRun): bool
 		{
-			$this->tryComposerInstall();
+			$this->tryComposerInstall($dryRun);
 
 			$this->console->output('Updating library dependencies:')->nl();
 			$outdated = $this->getOutdated();
@@ -119,7 +123,10 @@
 				} else {
 					$newVersion = Strings::replace($newVersion, '~\|\|?~', '||');
 					$this->console->output($newVersion);
-					$this->requirePackage($name, $newVersion);
+
+					if (!$dryRun) {
+						$this->requirePackage($name, $newVersion);
+					}
 				}
 
 				$this->console->nl();
@@ -152,9 +159,13 @@
 		}
 
 
-		private function tryComposerInstall(): void
+		private function tryComposerInstall(bool $dryRun): void
 		{
 			if (!$this->composerFile->existsLockFile()) {
+				if ($dryRun) {
+					throw new \RuntimeException('Missing composer.lock & dry-run mode enabled. Run `composer install` manually');
+				}
+
 				$this->console->output('Missing composer.lock, running of `composer install`.', \CzProject\PhpCli\Colors::YELLOW)->nl();
 				$result = $this->runner->run([
 					$this->composerExecutable,
