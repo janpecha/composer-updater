@@ -1,0 +1,31 @@
+{
+	"name": "janpecha/composer-updater",
+	"type": "library",
+	"description": "Auto-updates of composer.json.",
+	"license": "BSD-3-Clause",
+	"authors": [
+		{
+			"name": "Jan Pecha",
+			"homepage": "https://www.janpecha.cz/"
+		}
+	],
+	"require": {
+		"php": ">=7.2.0",
+		"czproject/phpcli": "^4.0",
+		"nette/utils": "^3.2",
+		"czproject/path-helper": "^4.1",
+		"czproject/assert": "^1.4",
+		"czproject/runner": "^1.1",
+		"composer/semver": "^3.2"
+	},
+	"require-dev": {
+		"nette/tester": "^2.4",
+		"phpstan/phpstan": "^1.4"
+	},
+	"autoload": {
+		"classmap": ["src/"]
+	},
+	"scripts": {
+		"phpstan": "phpstan analyse --configuration tests/phpstan.neon"
+	}
+}
