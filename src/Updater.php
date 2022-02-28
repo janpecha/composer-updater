@@ -101,7 +101,7 @@
 
 					$newUpperBound = $newConstraint->getUpperBound();
 
-					if ($upperBound->getVersion() !== $newUpperBound->getVersion()) {
+					if ($upperBound->getVersion() === $newUpperBound->getVersion()) {
 						break;
 					}
 
@@ -111,7 +111,6 @@
 					if ($retries <= 0) {
 						break;
 					}
-
 				}
 
 				$this->console->output(' => ', \CzProject\PhpCli\Colors::GRAY);
