@@ -52,6 +52,9 @@
 			if ($projectType === 'library') {
 				$result = $this->updateLibrary($dryRun);
 
+			} elseif ($projectType === 'project') {
+				$result = $this->updateProject($dryRun);
+
 			} else {
 				throw new \RuntimeException('Unknow "type: ' . $projectType . '" in composer.json.');
 			}
@@ -136,6 +139,90 @@
 		}
 
 
+		private function updateProject(bool $dryRun): bool
+		{
+			$this->tryComposerInstall($dryRun);
+
+			$this->console->output('Updating project dependencies:')->nl();
+			$outdated = $this->getOutdated();
+
+			if (count($outdated) === 0) {
+				$this->console->output(' - ', \CzProject\PhpCli\Colors::GRAY);
+				$this->console->output('nothing to update.', \CzProject\PhpCli\Colors::YELLOW);
+				$this->console->nl();
+				return TRUE;
+			}
+
+			if (!$dryRun) {
+				$this->console->output(' - ', \CzProject\PhpCli\Colors::GRAY);
+				$this->console->output('running `composer update`', \CzProject\PhpCli\Colors::GREEN);
+				$wasUpdated = FALSE;
+
+				try {
+					$wasUpdated = $this->composerUpdate(FALSE);
+
+				} catch (\RuntimeException $e) {
+					$this->console->output(' [FAILED]', \CzProject\PhpCli\Colors::RED);
+				}
+
+
+				if ($wasUpdated) {
+					$this->console->output(' [UPDATED]')->nl();
+					return TRUE;
+
+				} else {
+					$this->console->output(' [NOTHING TO UPDATE]')->nl();
+				}
+			}
+
+			foreach ($outdated as $outdatedPackage) {
+				$name = Arrays::get($outdatedPackage, 'name');
+				$this->console->output(' - ', \CzProject\PhpCli\Colors::GRAY);
+				$this->console->output($name, \CzProject\PhpCli\Colors::GREEN);
+
+				$latestVersion = $this->versionParser->normalize(Arrays::get($outdatedPackage, 'latest'));
+				$latestVersionConstraint = $this->createConstraintFromVersion($latestVersion);
+				$constraint = $this->versionParser->parseConstraints($this->composerFile->getPackageConstraint($name));
+				$newConstraint = $constraint;
+				$upperBound = $constraint->getUpperBound();
+				$newConstraint = NULL;
+
+				if (!$upperBound->isInclusive() && \Composer\Semver\Comparator::lessThan($upperBound->getVersion(), $latestVersion)) {
+					$newConstraint = $this->createConstraintFromBound($upperBound);
+
+				} else {
+					$newConstraint = $latestVersionConstraint;
+				}
+
+				$this->console->output(' => ', \CzProject\PhpCli\Colors::GRAY);
+				$newVersion = $newConstraint->getPrettyString();
+
+				if ($constraint->getPrettyString() === $newVersion) {
+					$this->console->output('nothing to update', \CzProject\PhpCli\Colors::YELLOW);
+
+				} else {
+					$newVersion = Strings::replace($newVersion, '~\|\|?~', '||');
+					$this->console->output($newVersion);
+
+					if (!$dryRun) {
+						$this->requirePackage($name, $newVersion);
+					}
+				}
+
+				$this->console->nl();
+			}
+
+			if (!$dryRun) {
+				$this->console->output(' - ', \CzProject\PhpCli\Colors::GRAY);
+				$this->console->output('running `composer update`', \CzProject\PhpCli\Colors::GREEN);
+				$this->composerUpdate(TRUE);
+			}
+
+			$this->console->nl();
+			return TRUE;
+		}
+
+
 		/**
 		 * @return array<array<string, mixed>>
 		 */
@@ -180,6 +267,25 @@
 		}
 
 
+		private function composerUpdate(bool $withAllDependencies): bool
+		{
+			$result = $this->runner->run([
+				$this->composerExecutable,
+				'update',
+				'--no-interaction',
+				'--prefer-dist',
+				'--no-progress',
+				$withAllDependencies ? '--with-all-dependencies' : FALSE,
+			]);
+
+			if (!$result->isOk()) {
+				throw new \RuntimeException("Composer update failed.");
+			}
+
+			return strpos(implode("\n", $result->getOutput()), 'Nothing to install, update or remove') === FALSE;
+		}
+
+
 		/**
 		 * @param  string $package
 		 * @param  string $constraint
@@ -204,10 +310,16 @@
 
 		private function createConstraintFromBound(\Composer\Semver\Constraint\Bound $bound): \Composer\Semver\Constraint\ConstraintInterface
 		{
-			$version = Strings::before($bound->getVersion(), '.', 2);
+			return $this->createConstraintFromVersion($bound->getVersion());
+		}
+
+
+		private function createConstraintFromVersion(string $version): \Composer\Semver\Constraint\ConstraintInterface
+		{
+			$version = Strings::before($version, '.', 2);
 
 			if (!is_string($version)) {
-				throw new \RuntimeException('Invalid bound version.');
+				throw new \RuntimeException('Invalid version string.');
 			}
 
 			return $this->versionParser->parseConstraints('^' . $version);
