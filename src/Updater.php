@@ -59,8 +59,13 @@
 				throw new \RuntimeException('Unknow "type: ' . $projectType . '" in composer.json.');
 			}
 
-			$this->console->output('Done.', \CzProject\PhpCli\Colors::GREEN)
-				->nl();
+			if ($result) {
+				$this->console->output('Done.', \CzProject\PhpCli\Colors::GREEN)->nl();
+
+			} else {
+				$this->console->output('Failed.', \CzProject\PhpCli\Colors::RED)->nl();
+			}
+
 			return $result;
 		}
 
@@ -175,6 +180,9 @@
 				}
 			}
 
+			$this->console->output('Updating project constraints:')->nl();
+			$packagesToUpdate = [];
+
 			foreach ($outdated as $outdatedPackage) {
 				$name = Arrays::get($outdatedPackage, 'name');
 				$this->console->output(' - ', \CzProject\PhpCli\Colors::GRAY);
@@ -184,38 +192,53 @@
 				$latestVersionConstraint = $this->createConstraintFromVersion($latestVersion);
 				$constraint = $this->versionParser->parseConstraints($this->composerFile->getPackageConstraint($name));
 				$newConstraint = $constraint;
-				$upperBound = $constraint->getUpperBound();
-				$newConstraint = NULL;
 
-				if (!$upperBound->isInclusive() && \Composer\Semver\Comparator::lessThan($upperBound->getVersion(), $latestVersion)) {
-					$newConstraint = $this->createConstraintFromBound($upperBound);
+				if (!$constraint->matches($latestVersionConstraint)) {
+					$upperBound = $constraint->getUpperBound();
 
-				} else {
-					$newConstraint = $latestVersionConstraint;
+					if (!$upperBound->isInclusive() && \Composer\Semver\Comparator::lessThan($upperBound->getVersion(), $latestVersion)) {
+						$newConstraint = $this->createConstraintFromBound($upperBound);
+
+					} else {
+						$newConstraint = $latestVersionConstraint;
+					}
 				}
 
 				$this->console->output(' => ', \CzProject\PhpCli\Colors::GRAY);
 				$newVersion = $newConstraint->getPrettyString();
 
 				if ($constraint->getPrettyString() === $newVersion) {
-					$this->console->output('nothing to update', \CzProject\PhpCli\Colors::YELLOW);
+					$this->console->output('nothing to update, stay on ' . $newVersion, \CzProject\PhpCli\Colors::GRAY);
 
 				} else {
 					$newVersion = Strings::replace($newVersion, '~\|\|?~', '||');
 					$this->console->output($newVersion);
-
-					if (!$dryRun) {
-						$this->requirePackage($name, $newVersion);
-					}
+					$packagesToUpdate[$name] = $newVersion;
 				}
 
 				$this->console->nl();
 			}
 
-			if (!$dryRun) {
-				$this->console->output(' - ', \CzProject\PhpCli\Colors::GRAY);
-				$this->console->output('running `composer update`', \CzProject\PhpCli\Colors::GREEN);
-				$this->composerUpdate(TRUE);
+			if (count($packagesToUpdate) > 0) {
+				$this->console->output('Apply updates:')->nl();
+				$result = $this->tryUpdatePackages($packagesToUpdate, $dryRun);
+
+				if ($result->hasFailedPackages()) {
+					$this->console->output('Some packages was not updated due conflict issues:')->nl();
+
+					foreach ($result->getFailedPackages() as $package => $newVersion) {
+						$this->console->output(' - ', \CzProject\PhpCli\Colors::RED);
+						$this->console->output($package, \CzProject\PhpCli\Colors::RED);
+						$this->console->output(' => NOT updated to ', \CzProject\PhpCli\Colors::RED);
+						$this->console->output($newVersion, \CzProject\PhpCli\Colors::RED);
+						$this->console->nl();
+					}
+				}
+
+				if (!$result->wasSomeUpdated()) {
+					$this->console->nl();
+					return FALSE;
+				}
 			}
 
 			$this->console->nl();
@@ -305,6 +328,51 @@
 			if (!$result->isOk()) {
 				throw new \RuntimeException("Composer require for package '$package' failed.");
 			}
+		}
+
+
+		private function tryRequirePackage(string $package, string $constraint, bool $dryRun): bool
+		{
+			$result = $this->runner->run([
+				$this->composerExecutable,
+				$dryRun ? '--dry-run' : FALSE,
+				'--update-with-all-dependencies',
+				'require',
+				$this->composerFile->isDevPackage($package) ? '--dev' : FALSE,
+				$package . ':' . $constraint,
+			]);
+
+			return $result->isOk();
+		}
+
+
+		/**
+		 * @param  array<string, string> $packages
+		 */
+		private function tryUpdatePackages(array $packages, bool $dryRun): UpdateResult
+		{
+			$result = new UpdateResult;
+
+			foreach ($packages as $package => $newVersion) {
+				if ($this->tryRequirePackage($package, $newVersion, $dryRun)) {
+					$result->addUpdatedPackage($package, $newVersion);
+					$this->console->output(' - ', \CzProject\PhpCli\Colors::GRAY);
+					$this->console->output($package, \CzProject\PhpCli\Colors::GREEN);
+					$this->console->output(' => updated to ', \CzProject\PhpCli\Colors::GRAY);
+					$this->console->output($newVersion);
+					$this->console->nl();
+
+				} else {
+					$result->addFailedPackage($package, $newVersion);
+				}
+			}
+
+			if ($result->wasSomeUpdated() && $result->hasFailedPackages()) { // try one round more
+				$subResult = $this->tryUpdatePackages($result->getFailedPackages(), $dryRun);
+				$result->mergeWith($subResult);
+			}
+
+			return $result;
 		}
 
 
