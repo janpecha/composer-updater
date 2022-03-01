@@ -185,6 +185,7 @@
 
 			foreach ($outdated as $outdatedPackage) {
 				$name = Arrays::get($outdatedPackage, 'name');
+				assert(is_string($name));
 				$this->console->output(' - ', \CzProject\PhpCli\Colors::GRAY);
 				$this->console->output($name, \CzProject\PhpCli\Colors::GREEN);
 
