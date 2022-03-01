@@ -255,6 +255,7 @@
 			$result = $this->runner->run([
 				$this->composerExecutable,
 				'outdated',
+				'--no-plugins',
 				'-D',
 				'--format=json'
 			]);
