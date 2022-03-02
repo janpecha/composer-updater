@@ -10,14 +10,11 @@
 		function getType(): string;
 
 
-		function getPackageConstraint(string $package): string;
-
-
 		function existsLockFile(): bool;
 
 
 		/**
-		 * @return array<array<string, mixed>>
+		 * @return Package[]
 		 */
 		function getOutdated(): array;
 

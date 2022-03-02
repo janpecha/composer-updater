@@ -37,21 +37,12 @@
 		}
 
 
-		public function getPackageConstraint(string $package): string
-		{
-			return $this->composerFile->getPackageConstraint($package);
-		}
-
-
 		public function existsLockFile(): bool
 		{
 			return $this->composerFile->existsLockFile();
 		}
 
 
-		/**
-		 * @return array<array<string, mixed>>
-		 */
 		public function getOutdated(): array
 		{
 			$result = $this->runner->run([
@@ -68,7 +59,20 @@
 
 			$outdated = Nette\Utils\Json::decode(implode("\n", $result->getOutput()), Nette\Utils\Json::FORCE_ARRAY);
 			assert(is_array($outdated));
-			return Arrays::get($outdated, 'installed');
+			$result = [];
+
+			foreach (Arrays::get($outdated, 'installed') as $package) {
+				$packageName = Arrays::get($package, 'name');
+				$result[] = new Package(
+					$packageName,
+					$this->composerFile->getPackageConstraint($packageName),
+					Arrays::get($package, 'version'),
+					Arrays::get($package, 'latest'),
+					Arrays::get($package, 'latest-status')
+				);
+			}
+
+			return $result;
 		}
 
 

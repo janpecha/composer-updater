@@ -75,17 +75,17 @@
 			}
 
 			foreach ($outdated as $outdatedPackage) {
-				if (Arrays::get($outdatedPackage, 'latest-status') !== 'update-possible') {
+				if ($outdatedPackage->getUpdateStatus() !== 'update-possible') {
 					continue;
 				}
 
-				$name = Arrays::get($outdatedPackage, 'name');
+				$name = $outdatedPackage->getName();
 				$this->console->output(' - ', \CzProject\PhpCli\Colors::GRAY);
 				$this->console->output($name, \CzProject\PhpCli\Colors::GREEN);
 
-				$latestVersion = new \Composer\Semver\Constraint\Constraint('==', $this->versionParser->normalize(Arrays::get($outdatedPackage, 'latest')));
+				$latestVersion = new \Composer\Semver\Constraint\Constraint('==', $this->versionParser->normalize($outdatedPackage->getLatestVersion()));
 
-				$constraint = $this->versionParser->parseConstraints($this->composerBridge->getPackageConstraint($name));
+				$constraint = $this->versionParser->parseConstraints($outdatedPackage->getConstraint());
 				$newConstraint = $constraint;
 				$upperBound = $constraint->getUpperBound();
 				$retries = 5;
@@ -174,14 +174,13 @@
 			$packagesToUpdate = [];
 
 			foreach ($outdated as $outdatedPackage) {
-				$name = Arrays::get($outdatedPackage, 'name');
-				assert(is_string($name));
+				$name = $outdatedPackage->getName();
 				$this->console->output(' - ', \CzProject\PhpCli\Colors::GRAY);
 				$this->console->output($name, \CzProject\PhpCli\Colors::GREEN);
 
-				$latestVersion = $this->versionParser->normalize(Arrays::get($outdatedPackage, 'latest'));
+				$latestVersion = $this->versionParser->normalize($outdatedPackage->getLatestVersion());
 				$latestVersionConstraint = $this->createConstraintFromVersion($latestVersion);
-				$constraint = $this->versionParser->parseConstraints($this->composerBridge->getPackageConstraint($name));
+				$constraint = $this->versionParser->parseConstraints($outdatedPackage->getConstraint());
 				$newConstraint = $constraint;
 
 				if (!$constraint->matches($latestVersionConstraint)) {
