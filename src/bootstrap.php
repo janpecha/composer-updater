@@ -71,11 +71,14 @@ if (!is_file($composerFile)) {
 	throw new \RuntimeException('Composer file ' . $composerFile . ' not found.');
 }
 
-$updater = new Updater(
+$bridge = new CliBridge(
 	$composerFile,
 	$console->getOption('composer-bin')
 		->setDefaultValue('composer')
-		->getValue(),
+		->getValue()
+);
+$updater = new Updater(
+	$bridge,
 	$console
 );
 $ok = $updater->run(

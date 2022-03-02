@@ -4,38 +4,28 @@
 
 	namespace JP\ComposerUpdater;
 
-	use Nette;
 	use Nette\Utils\Arrays;
 	use Nette\Utils\Strings;
 
 	class Updater
 	{
-		/** @var ComposerFile */
-		private $composerFile;
-
-		/** @var string */
-		private $composerExecutable;
+		/** @var IComposerBridge */
+		private $composerBridge;
 
 		/** @var \CzProject\PhpCli\Console */
 		private $console;
-
-		/** @var \CzProject\Runner\Runner */
-		private $runner;
 
 		/** @var \Composer\Semver\VersionParser */
 		private $versionParser;
 
 
 		public function __construct(
-			string $composerFile,
-			string $composerExecutable,
+			IComposerBridge $composerBridge,
 			\CzProject\PhpCli\Console $console
 		)
 		{
-			$this->composerFile = ComposerFile::open($composerFile);
-			$this->composerExecutable = $composerExecutable;
+			$this->composerBridge = $composerBridge;
 			$this->console = $console;
-			$this->runner = new \CzProject\Runner\Runner(dirname($this->composerFile->getPath()));
 			$this->versionParser = new \Composer\Semver\VersionParser;
 		}
 
@@ -46,7 +36,7 @@
 				$this->console->output('Dry-run mode')->nl();
 			}
 
-			$projectType = $this->composerFile->getType();
+			$projectType = $this->composerBridge->getType();
 			$result = FALSE;
 
 			if ($projectType === 'library') {
@@ -75,7 +65,7 @@
 			$this->tryComposerInstall($dryRun);
 
 			$this->console->output('Updating library dependencies:')->nl();
-			$outdated = $this->getOutdated();
+			$outdated = $this->composerBridge->getOutdated();
 
 			if (count($outdated) === 0) {
 				$this->console->output(' - ', \CzProject\PhpCli\Colors::GRAY);
@@ -95,7 +85,7 @@
 
 				$latestVersion = new \Composer\Semver\Constraint\Constraint('==', $this->versionParser->normalize(Arrays::get($outdatedPackage, 'latest')));
 
-				$constraint = $this->versionParser->parseConstraints($this->composerFile->getPackageConstraint($name));
+				$constraint = $this->versionParser->parseConstraints($this->composerBridge->getPackageConstraint($name));
 				$newConstraint = $constraint;
 				$upperBound = $constraint->getUpperBound();
 				$retries = 5;
@@ -132,7 +122,7 @@
 					$this->console->output($newVersion);
 
 					if (!$dryRun) {
-						$this->requirePackage($name, $newVersion);
+						$this->composerBridge->requirePackageWithoutUpdate($name, $newVersion);
 					}
 				}
 
@@ -149,7 +139,7 @@
 			$this->tryComposerInstall($dryRun);
 
 			$this->console->output('Updating project dependencies:')->nl();
-			$outdated = $this->getOutdated();
+			$outdated = $this->composerBridge->getOutdated();
 
 			if (count($outdated) === 0) {
 				$this->console->output(' - ', \CzProject\PhpCli\Colors::GRAY);
@@ -164,7 +154,7 @@
 				$wasUpdated = FALSE;
 
 				try {
-					$wasUpdated = $this->composerUpdate(FALSE);
+					$wasUpdated = $this->composerBridge->runComposerUpdate(FALSE);
 
 				} catch (\RuntimeException $e) {
 					$this->console->output(' [FAILED]', \CzProject\PhpCli\Colors::RED);
@@ -191,7 +181,7 @@
 
 				$latestVersion = $this->versionParser->normalize(Arrays::get($outdatedPackage, 'latest'));
 				$latestVersionConstraint = $this->createConstraintFromVersion($latestVersion);
-				$constraint = $this->versionParser->parseConstraints($this->composerFile->getPackageConstraint($name));
+				$constraint = $this->versionParser->parseConstraints($this->composerBridge->getPackageConstraint($name));
 				$newConstraint = $constraint;
 
 				if (!$constraint->matches($latestVersionConstraint)) {
@@ -247,104 +237,16 @@
 		}
 
 
-		/**
-		 * @return array<array<string, mixed>>
-		 */
-		private function getOutdated(): array
-		{
-			$result = $this->runner->run([
-				$this->composerExecutable,
-				'outdated',
-				'--no-plugins',
-				'-D',
-				'--format=json'
-			]);
-
-			if (!$result->isOk()) {
-				throw new \RuntimeException("Composer outdated failed.");
-			}
-
-			$outdated = Nette\Utils\Json::decode(implode("\n", $result->getOutput()), Nette\Utils\Json::FORCE_ARRAY);
-			assert(is_array($outdated));
-			return Arrays::get($outdated, 'installed');
-		}
-
-
 		private function tryComposerInstall(bool $dryRun): void
 		{
-			if (!$this->composerFile->existsLockFile()) {
+			if (!$this->composerBridge->existsLockFile()) {
 				if ($dryRun) {
 					throw new \RuntimeException('Missing composer.lock & dry-run mode enabled. Run `composer install` manually');
 				}
 
 				$this->console->output('Missing composer.lock, running of `composer install`.', \CzProject\PhpCli\Colors::YELLOW)->nl();
-				$result = $this->runner->run([
-					$this->composerExecutable,
-					'install',
-					'--no-interaction',
-					'--prefer-dist',
-				]);
-
-				if (!$result->isOk()) {
-					throw new \RuntimeException("Composer install failed.");
-				}
+				$this->composerBridge->runComposerInstall();
 			}
-		}
-
-
-		private function composerUpdate(bool $withAllDependencies): bool
-		{
-			$result = $this->runner->run([
-				$this->composerExecutable,
-				'update',
-				'--no-interaction',
-				'--prefer-dist',
-				'--no-progress',
-				$withAllDependencies ? '--with-all-dependencies' : FALSE,
-			]);
-
-			if (!$result->isOk()) {
-				throw new \RuntimeException("Composer update failed.");
-			}
-
-			return strpos(implode("\n", $result->getOutput()), 'Nothing to install, update or remove') === FALSE;
-		}
-
-
-		/**
-		 * @param  string $package
-		 * @param  string $constraint
-		 * @return void
-		 */
-		private function requirePackage($package, $constraint): void
-		{
-			$result = $this->runner->run([
-				$this->composerExecutable,
-				'--no-update',
-				'--no-scripts',
-				'require',
-				$this->composerFile->isDevPackage($package) ? '--dev' : FALSE,
-				$package . ':' . $constraint,
-			]);
-
-			if (!$result->isOk()) {
-				throw new \RuntimeException("Composer require for package '$package' failed.");
-			}
-		}
-
-
-		private function tryRequirePackage(string $package, string $constraint, bool $dryRun): bool
-		{
-			$result = $this->runner->run([
-				$this->composerExecutable,
-				$dryRun ? '--dry-run' : FALSE,
-				'--update-with-all-dependencies',
-				'require',
-				$this->composerFile->isDevPackage($package) ? '--dev' : FALSE,
-				$package . ':' . $constraint,
-			]);
-
-			return $result->isOk();
 		}
 
 
@@ -356,7 +258,7 @@
 			$result = new UpdateResult;
 
 			foreach ($packages as $package => $newVersion) {
-				if ($this->tryRequirePackage($package, $newVersion, $dryRun)) {
+				if ($this->composerBridge->tryRequirePackage($package, $newVersion, $dryRun)) {
 					$result->addUpdatedPackage($package, $newVersion);
 					$this->console->output(' - ', \CzProject\PhpCli\Colors::GRAY);
 					$this->console->output($package, \CzProject\PhpCli\Colors::GREEN);
