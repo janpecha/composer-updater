@@ -65,7 +65,7 @@
 			$this->tryComposerInstall($dryRun);
 
 			$this->console->output('Updating library dependencies:')->nl();
-			$outdated = $this->composerBridge->getOutdated();
+			$outdated = $this->getOutdatedPackages();
 
 			if (count($outdated) === 0) {
 				$this->console->output(' - ', \CzProject\PhpCli\Colors::GRAY);
@@ -75,41 +75,16 @@
 			}
 
 			foreach ($outdated as $outdatedPackage) {
-				if ($outdatedPackage->getUpdateStatus() !== 'update-possible') {
-					continue;
-				}
-
 				$name = $outdatedPackage->getName();
 				$this->console->output(' - ', \CzProject\PhpCli\Colors::GRAY);
 				$this->console->output($name, \CzProject\PhpCli\Colors::GREEN);
 
-				$latestVersion = new \Composer\Semver\Constraint\Constraint('==', $this->versionParser->normalize($outdatedPackage->getLatestVersion()));
+				$constraint = $outdatedPackage->getConstraint();
 
-				$constraint = $this->versionParser->parseConstraints($outdatedPackage->getConstraint());
-				$newConstraint = $constraint;
-				$upperBound = $constraint->getUpperBound();
-				$retries = 5;
-
-				while (!$newConstraint->matches($latestVersion)) {
-					$newConstraint = $this->mergeConstraint($newConstraint, $this->createConstraintFromBound($upperBound));
-
-					if ($newConstraint->matches($latestVersion)) {
-						break;
-					}
-
-					$newUpperBound = $newConstraint->getUpperBound();
-
-					if ($upperBound->getVersion() === $newUpperBound->getVersion()) {
-						break;
-					}
-
-					$upperBound = $newUpperBound;
-					$retries--;
-
-					if ($retries <= 0) {
-						break;
-					}
-				}
+				$newConstraint = $this->mergeConstraint(
+					$constraint,
+					$this->createConstraintFromVersion($outdatedPackage->getLatestVersion())
+				);
 
 				$this->console->output(' => ', \CzProject\PhpCli\Colors::GRAY);
 				$newVersion = $newConstraint->getPrettyString();
@@ -139,7 +114,7 @@
 			$this->tryComposerInstall($dryRun);
 
 			$this->console->output('Updating project dependencies:')->nl();
-			$outdated = $this->composerBridge->getOutdated();
+			$outdated = $this->getOutdatedPackages();
 
 			if (count($outdated) === 0) {
 				$this->console->output(' - ', \CzProject\PhpCli\Colors::GRAY);
@@ -178,21 +153,8 @@
 				$this->console->output(' - ', \CzProject\PhpCli\Colors::GRAY);
 				$this->console->output($name, \CzProject\PhpCli\Colors::GREEN);
 
-				$latestVersion = $this->versionParser->normalize($outdatedPackage->getLatestVersion());
-				$latestVersionConstraint = $this->createConstraintFromVersion($latestVersion);
-				$constraint = $this->versionParser->parseConstraints($outdatedPackage->getConstraint());
-				$newConstraint = $constraint;
-
-				if (!$constraint->matches($latestVersionConstraint)) {
-					$upperBound = $constraint->getUpperBound();
-
-					if (!$upperBound->isInclusive() && \Composer\Semver\Comparator::lessThan($upperBound->getVersion(), $latestVersion)) {
-						$newConstraint = $this->createConstraintFromBound($upperBound);
-
-					} else {
-						$newConstraint = $latestVersionConstraint;
-					}
-				}
+				$constraint = $outdatedPackage->getConstraint();
+				$newConstraint = $this->createConstraintFromVersion($outdatedPackage->getLatestVersion());
 
 				$this->console->output(' => ', \CzProject\PhpCli\Colors::GRAY);
 				$newVersion = $newConstraint->getPrettyString();
@@ -236,6 +198,33 @@
 		}
 
 
+		/**
+		 * @return PackageToUpdate[]
+		 */
+		private function getOutdatedPackages(): array
+		{
+			$result = [];
+			$outdated = $this->composerBridge->getOutdated();
+
+			foreach ($outdated as $outdatedPackage) {
+				$latestVersion = $this->versionParser->normalize($outdatedPackage->getLatestVersion());
+
+				$packageToUpdate = new PackageToUpdate(
+					$outdatedPackage,
+					$this->versionParser->parseConstraints($outdatedPackage->getConstraint()),
+					$latestVersion,
+					$this->createConstraintFromVersion($latestVersion)
+				);
+
+				if ($packageToUpdate->needsToUpdate()) {
+					$result[] = $packageToUpdate;
+				}
+			}
+
+			return $result;
+		}
+
+
 		private function tryComposerInstall(bool $dryRun): void
 		{
 			if (!$this->composerBridge->existsLockFile()) {
@@ -276,12 +265,6 @@
 			}
 
 			return $result;
-		}
-
-
-		private function createConstraintFromBound(\Composer\Semver\Constraint\Bound $bound): \Composer\Semver\Constraint\ConstraintInterface
-		{
-			return $this->createConstraintFromVersion($bound->getVersion());
 		}
 
 

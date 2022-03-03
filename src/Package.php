@@ -19,23 +19,18 @@
 		/** @var string */
 		private $latestVersion;
 
-		/** @var string */
-		private $updateStatus;
-
 
 		public function __construct(
 			string $name,
 			string $constraint,
 			string $currentVersion,
-			string $latestVersion,
-			string $updateStatus
+			string $latestVersion
 		)
 		{
 			$this->name = $name;
 			$this->constraint = $constraint;
 			$this->currentVersion = $currentVersion;
 			$this->latestVersion = $latestVersion;
-			$this->updateStatus = $updateStatus;
 		}
 
 
@@ -60,11 +55,5 @@
 		public function getLatestVersion(): string
 		{
 			return $this->latestVersion;
-		}
-
-
-		public function getUpdateStatus(): string
-		{
-			return $this->updateStatus;
 		}
 	}

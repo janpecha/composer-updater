@@ -62,13 +62,13 @@
 			$result = [];
 
 			foreach (Arrays::get($outdated, 'installed') as $package) {
+				assert(is_array($package));
 				$packageName = Arrays::get($package, 'name');
 				$result[] = new Package(
 					$packageName,
 					$this->composerFile->getPackageConstraint($packageName),
 					Arrays::get($package, 'version'),
-					Arrays::get($package, 'latest'),
-					Arrays::get($package, 'latest-status')
+					Arrays::get($package, 'latest')
 				);
 			}
 
