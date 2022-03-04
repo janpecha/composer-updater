@@ -29,15 +29,15 @@ class Tests
 	 * @param  \JP\ComposerUpdater\Package[] $packages
 	 */
 	public static function createUpdater(
-		string $type,
-		array $packages,
 		array $repository,
-		bool $existsLockFile,
+		string $type,
+		array $composerFile,
+		?array $lockFile,
 		\CzProject\PhpCli\Outputs\MemoryOutputProvider $outputProvider
 	): \JP\ComposerUpdater\Updater
 	{
 		return new \JP\ComposerUpdater\Updater(
-			new \JP\ComposerUpdater\MemoryBridge($type, $packages, $existsLockFile, $repository),
+			new \JP\ComposerUpdater\MemoryBridge($repository, $type, $composerFile, $lockFile),
 			self::createConsole($outputProvider)
 		);
 	}

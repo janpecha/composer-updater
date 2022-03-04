@@ -10,50 +10,63 @@
 
 	class MemoryBridge implements IComposerBridge
 	{
-		/** @var string */
-		private $type;
-
-		/** @var array<string, Package> */
-		private $packages = [];
-
-		/** @var bool */
-		private $existsLockFile;
-
 		/** @var array<string, array<string, array<string, string>>> */
 		private $repository = [];
 
+		/** @var string */
+		private $type;
+
+		/** @var array<string, string> */
+		private $composerFile = [];
+
+		/** @var array<string, string> */
+		private $lockFile;
+
+		/** @var array<string, string> */
+		private $latestVersions = [];
+
 
 		/**
-		 * @param Package[] $packages
 		 * @param array<string, array<string, array<string, string>>> $repository
+		 * @param array<string, string> $composerFile
+		 * @param array<string, string>|NULL $lockFile
 		 */
 		public function __construct(
+			array $repository,
 			string $type,
-			array $packages,
-			bool $existsLockFile,
-			array $repository
+			array $composerFile,
+			?array $lockFile
 		)
 		{
-			$this->type = $type;
-			$this->existsLockFile = $existsLockFile;
+			foreach ($repository as $packageName => $versions) {
+				if (count($versions) === 0) {
+					throw new \RuntimeException("Missing versions for package '$packageName' in repository.");
+				}
+			}
+
 			$this->repository = $repository;
+			$this->type = $type;
 
-			foreach ($packages as $package) {
-				$packageName = $package->getName();
-
+			foreach ($composerFile as $packageName => $constraint) {
 				if (!isset($this->repository[$packageName])) {
 					throw new \RuntimeException("Package '$packageName' is not in package repository.");
 				}
 
-				if (!isset($this->repository[$packageName][$package->getCurrentVersion()])) {
-					throw new \RuntimeException("Version '{$package->getCurrentVersion()}' of '$packageName' is not in repository.");
-				}
+				$this->composerFile[$packageName] = $constraint;
+			}
 
-				if (!isset($this->repository[$packageName][$package->getLatestVersion()])) {
-					throw new \RuntimeException("Version '{$package->getLatestVersion()}' of '$packageName' is not in repository.");
-				}
+			if ($lockFile !== NULL) {
+				foreach ($lockFile as $packageName => $currentVersion) {
+					if (!isset($this->repository[$packageName])) {
+						throw new \RuntimeException("Package '$packageName' is not in package repository.");
+					}
 
-				$this->packages[$package->getName()] = $package;
+					if (!isset($this->repository[$packageName][$currentVersion])) {
+						throw new \RuntimeException("Version '$currentVersion' of package '$packageName' is not in package repository.");
+					}
+
+					$this->lockFile[$packageName] = $currentVersion;
+				}
 			}
 		}
 
@@ -64,25 +77,25 @@
 		}
 
 
-		public function getPackageConstraint(string $package): string
-		{
-			return $this->getPackage($package)->getConstraint();
-		}
-
-
 		public function existsLockFile(): bool
 		{
-			return $this->existsLockFile;
+			return $this->lockFile !== NULL;
 		}
 
 
 		public function getOutdated(): array
 		{
+			if ($this->lockFile === NULL) {
+				return [];
+			}
+
 			$result = [];
 
-			foreach ($this->packages as $package) {
-				if ($package->getCurrentVersion() !== $package->getLatestVersion()) {
-					$result[] = $package;
+			foreach ($this->lockFile as $packageName => $currentVersion) {
+				$latestVersion = $this->getLatestVersion($packageName);
+
+				if ($currentVersion !== $latestVersion) {
+					$result[] = new Package($packageName, $this->getPackageConstraint($packageName), $currentVersion, $latestVersion);
 				}
 			}
 
@@ -92,58 +105,78 @@
 
 		public function runComposerInstall(): void
 		{
-			$this->existsLockFile = TRUE;
+			$this->lockFile = $this->getOrInstallLockFile();
 		}
 
 
 		public function runComposerUpdate(bool $withAllDependencies): bool
 		{
-			$this->existsLockFile = TRUE;
+			$lockFile = $this->getOrInstallLockFile();
 			$wasUpdated = FALSE;
 
-			foreach ($this->packages as $package) {
-				$wasUpdated = $wasUpdated || $this->tryUpdatePackage($package, $package->getConstraint(), $withAllDependencies, FALSE);
+			foreach ($this->composerFile as $packageName => $constraint) {
+				$wasUpdated = $wasUpdated || $this->tryUpdatePackage($lockFile, $packageName, $constraint, $withAllDependencies);
 			}
 
+			$this->lockFile = $lockFile;
 			return $wasUpdated;
 		}
 
 
 		public function requirePackageWithoutUpdate(string $package, string $constraint): void
 		{
-			$p = $this->getPackage($package);
-			$this->packages[$p->getName()] = new Package(
-				$p->getName(),
-				$constraint,
-				$p->getCurrentVersion(),
-				$p->getLatestVersion()
-			);
+			if (!isset($this->repository[$package])) {
+				throw new \RuntimeException("Missing package '$package' in repository.");
+			}
+
+			$this->composerFile[$package] = $constraint;
 		}
 
 
 		public function tryRequirePackage(string $package, string $constraint, bool $dryRun): bool
 		{
-			return $this->tryUpdatePackage($this->getPackage($package), $constraint, TRUE, $dryRun);
+			$lockFile = $this->lockFile !== NULL ? $this->lockFile : [];
+			$wasUpdated = $this->tryUpdatePackage($lockFile, $package, $constraint, TRUE);
+
+			if (!$dryRun) {
+				$this->lockFile = $lockFile;
+			}
+
+			return $wasUpdated;
 		}
 
 
-		public function getPackage(string $package): Package
+		public function getPackageConstraint(string $package): string
 		{
-			$result = Arrays::get($this->packages, $package);
-			assert($result instanceof Package);
-			return $result;
+			$constraint = Arrays::get($this->composerFile, $package);
+			assert(is_string($constraint));
+			return $constraint;
 		}
 
 
+		public function getInstalledVersion(string $package): string
+		{
+			if ($this->lockFile === NULL) {
+				throw new \RuntimeException('Missing lock file.');
+			}
+
+			$installedVersion = Arrays::get($this->lockFile, $package);
+			assert(is_string($installedVersion));
+			return $installedVersion;
+		}
+
+
+		/**
+		 * @param  array<string, string> &$lockFile
+		 */
 		private function tryUpdatePackage(
-			Package $package,
+			array &$lockFile,
+			string $packageName,
 			string $constraint,
-			bool $withAllDependencies,
-			bool $dryRun
+			bool $withAllDependencies
 		): bool
 		{
-			$packageName = $package->getName();
-			$candidates = \Composer\Semver\Semver::satisfiedBy(array_keys($this->repository[$packageName]), $constraint);
+			$candidates = \Composer\Semver\Semver::satisfiedBy($this->getVersions($packageName), $constraint);
 			$candidates = \Composer\Semver\Semver::rsort($candidates);
 
 			if (count($candidates) === 0) {
@@ -155,30 +188,112 @@
 			foreach ($candidates as $candidate) {
 				foreach ($this->repository[$packageName][$candidate] as $dependency => $dependencyConstraint) {
 					if ($withAllDependencies) {
-						$wasUpdated = $this->tryUpdatePackage($this->getPackage($dependency), $dependencyConstraint, $withAllDependencies, $dryRun);
+						$wasDepUpdated = $this->tryUpdatePackage($lockFile, $dependency, $dependencyConstraint, $withAllDependencies);
 
-						if (!$wasUpdated) { // cannot be updated
-							continue;
+						if (!$wasDepUpdated) { // cannot be updated
+							continue 2;
 						}
 
-					} elseif (!\Composer\Semver\Semver::satisfies($this->getPackage($dependency)->getCurrentVersion(), $dependencyConstraint)) {
+					} elseif (!\Composer\Semver\Semver::satisfies($this->getInstalledVersion($dependency), $dependencyConstraint)) {
 						continue;
 					}
 				}
 
-				if (!$dryRun) {
-					$this->packages[$packageName] = new Package(
-						$packageName,
-						$constraint,
-						$candidate,
-						$package->getLatestVersion()
-					);
+				if (!isset($lockFile[$packageName]) || $candidate !== $lockFile[$packageName]) {
+					$wasUpdated = TRUE;
 				}
 
-				$wasUpdated = $candidate !== $package->getCurrentVersion();
+				$lockFile[$packageName] = $candidate;
 				break;
 			}
 
 			return $wasUpdated;
+		}
+
+
+		/**
+		 * @return array<string, string>
+		 */
+		private function getOrInstallLockFile(): array
+		{
+			if ($this->lockFile === NULL) {
+				$lockFile = [];
+
+				foreach ($this->composerFile as $packageName => $constrait) {
+					$this->tryInstallToLock($lockFile, $packageName, $constrait);
+				}
+
+				$this->lockFile = $lockFile;
+			}
+
+			return $this->lockFile;
+
+		}
+
+
+		/**
+		 * @param  array<string, string> &$lockFile
+		 */
+		private function tryInstallToLock(
+			array &$lockFile,
+			string $packageName,
+			string $constraint
+		): bool
+		{
+			if (isset($lockFile[$packageName])) {
+				return \Composer\Semver\Semver::satisfies($lockFile[$packageName], $constraint);
+			}
+
+			$candidates = \Composer\Semver\Semver::satisfiedBy($this->getVersions($packageName), $constraint);
+			$candidates = \Composer\Semver\Semver::rsort($candidates);
+
+			if (count($candidates) === 0) {
+				throw new \RuntimeException("Missing any version for package '$packageName'.");
+			}
+
+			$wasInstalled = FALSE;
+
+			foreach ($candidates as $candidate) {
+				$allOk = TRUE;
+
+				foreach ($this->repository[$packageName][$candidate] as $dependency => $dependencyConstraint) {
+					$allOk = $allOk && $this->tryInstallToLock($lockFile, $dependency, $dependencyConstraint);
+				}
+
+				if ($allOk) {
+					$lockFile[$packageName] = $candidate;
+					$wasInstalled = TRUE;
+					break;
+				}
+			}
+
+			return $wasInstalled;
+		}
+
+
+		/**
+		 * @param  string $package
+		 * @return string[]
+		 */
+		private function getVersions(string $package): array
+		{
+			return array_keys($this->repository[$package]);
+		}
+
+
+		private function getLatestVersion(string $package): string
+		{
+			if (!isset($this->latestVersions[$package])) {
+				$versions = \Composer\Semver\Semver::rsort($this->getVersions($package));
+				$latestVersion = Arrays::first($versions);
+
+				if (!is_string($latestVersion)) {
+					throw new \RuntimeException('Latest version not found.');
+				}
+
+				$this->latestVersions[$package] = $latestVersion;
+			}
+
+			return $this->latestVersions[$package];
 		}
 	}

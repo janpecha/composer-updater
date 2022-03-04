@@ -6,15 +6,9 @@ use Tester\Assert;
 require __DIR__ . '/../bootstrap.php';
 
 
-test('Library update', function () {
+test('Project update', function () {
 	$outputProvider = Tests::createConsoleOutput();
 	$memoryBridge = new \JP\ComposerUpdater\MemoryBridge(
-		'project',
-		[
-			new ComposerUpdater\Package('org/package1', '^2.4', 'v2.4.2', 'v2.4.3'),
-			new ComposerUpdater\Package('org/package2', '^0.7', 'v0.7.0', 'v1.0.0'),
-		],
-		TRUE,
 		[
 			'org/package1' => [
 				'v2.4.0' => [],
@@ -27,6 +21,15 @@ test('Library update', function () {
 				'v0.8.0' => [],
 				'v1.0.0' => [],
 			],
+		],
+		'project',
+		[
+			'org/package1' => '^2.4',
+			'org/package2' => '^0.7',
+		],
+		[
+			'org/package1' => 'v2.4.2',
+			'org/package2' => 'v0.7.0',
 		]
 	);
 	$updater = new \JP\ComposerUpdater\Updater($memoryBridge, Tests::createConsole($outputProvider));
@@ -38,11 +41,9 @@ test('Library update', function () {
 		'Done.',
 	], $outputProvider);
 
-	$package = $memoryBridge->getPackage('org/package1');
-	Assert::same('v2.4.3', $package->getCurrentVersion());
+	Assert::same('v2.4.3', $memoryBridge->getInstalledVersion('org/package1'));
 
-	$package = $memoryBridge->getPackage('org/package2');
-	Assert::same('v0.7.0', $package->getCurrentVersion());
+	Assert::same('v0.7.0', $memoryBridge->getInstalledVersion('org/package2'));
 
 	$updater->run(FALSE);
 	Tests::assertOutput([
@@ -63,28 +64,38 @@ test('Library update', function () {
 
 test('Nothing to update', function () {
 	$outputProvider = Tests::createConsoleOutput();
-	$updater = Tests::createUpdater('project', [
-		new ComposerUpdater\Package('org/package1', '^2.4', 'v2.4.2', 'v2.4.3'),
-		new ComposerUpdater\Package('org/package2', '^0.7 || ^1.0', 'v0.7.0', 'v1.0.0'),
-		new ComposerUpdater\Package('org/package3', '~1.0.0', 'v0.7.0', 'v1.0.0'),
-	], [
-		'org/package1' => [
-			'v2.4.0' => [],
-			'v2.4.1' => [],
-			'v2.4.2' => [],
-			'v2.4.3' => [],
+	$updater = Tests::createUpdater(
+		[
+			'org/package1' => [
+				'v2.4.0' => [],
+				'v2.4.1' => [],
+				'v2.4.2' => [],
+				'v2.4.3' => [],
+			],
+			'org/package2' => [
+				'v0.7.0' => [],
+				'v0.8.0' => [],
+				'v1.0.0' => [],
+			],
+			'org/package3' => [
+				'v0.7.0' => [],
+				'v0.8.0' => [],
+				'v1.0.0' => [],
+			],
 		],
-		'org/package2' => [
-			'v0.7.0' => [],
-			'v0.8.0' => [],
-			'v1.0.0' => [],
+		'project',
+		[
+			'org/package1' => '^2.4',
+			'org/package2' => '^0.7 || ^1.0',
+			'org/package3' => '~1.0.0',
 		],
-		'org/package3' => [
-			'v0.7.0' => [],
-			'v0.8.0' => [],
-			'v1.0.0' => [],
+		[
+			'org/package1' => 'v2.4.2',
+			'org/package2' => 'v0.7.0',
+			'org/package3' => 'v0.7.0',
 		],
-	], TRUE, $outputProvider);
+		$outputProvider
+	);
 
 	$updater->run(FALSE);
 	Tests::assertOutput([
