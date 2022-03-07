@@ -76,6 +76,26 @@
 		}
 
 
+		public function getVersions(string $package): array
+		{
+			$result = $this->runner->run([
+				$this->composerExecutable,
+				'show',
+				$package,
+				'--all',
+				'--format=json',
+			]);
+
+			if (!$result->isOk()) {
+				throw new \RuntimeException("Composer show failed.");
+			}
+
+			$data = Nette\Utils\Json::decode(implode("\n", $result->getOutput()), Nette\Utils\Json::FORCE_ARRAY);
+			assert(is_array($data));
+			return Arrays::get($data, 'versions');
+		}
+
+
 		public function runComposerInstall(): void
 		{
 			$result = $this->runner->run([

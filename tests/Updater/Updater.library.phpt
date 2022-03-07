@@ -1,7 +1,5 @@
 <?php
 
-use JP\ComposerUpdater;
-
 require __DIR__ . '/../bootstrap.php';
 
 
@@ -34,7 +32,7 @@ test('Library update', function () {
 	Tests::assertOutput([
 		'Missing composer.lock, running of `composer install`.',
 		'Updating library dependencies:',
-		' - org/package2 => ^0.7 || ^1.0',
+		' - org/package2 => ^0.7 || ^0.8 || ^1.0',
 		'',
 		'Done.',
 	], $outputProvider);

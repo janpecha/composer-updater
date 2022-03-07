@@ -19,6 +19,12 @@
 		function getOutdated(): array;
 
 
+		/**
+		 * @return string[]
+		 */
+		function getVersions(string $package): array;
+
+
 		function runComposerInstall(): void;
 
 

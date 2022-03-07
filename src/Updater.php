@@ -80,11 +80,18 @@
 				$this->console->output($name, \CzProject\PhpCli\Colors::GREEN);
 
 				$constraint = $outdatedPackage->getConstraint();
+				$newConstraint = $constraint;
 
-				$newConstraint = $this->mergeConstraint(
-					$constraint,
-					$this->createConstraintFromVersion($outdatedPackage->getLatestVersion())
-				);
+				foreach ($outdatedPackage->getVersions() as $version) {
+					if ($version->satisfies($newConstraint)) {
+						continue;
+					}
+
+					$newConstraint = $this->mergeConstraint(
+						$newConstraint,
+						$this->createConstraintFromVersion($version->getNormalizedVersion())
+					);
+				}
 
 				$this->console->output(' => ', \CzProject\PhpCli\Colors::GRAY);
 				$newVersion = $newConstraint->getPrettyString();
@@ -213,11 +220,35 @@
 					$outdatedPackage,
 					$this->versionParser->parseConstraints($outdatedPackage->getConstraint()),
 					$latestVersion,
-					$this->createConstraintFromVersion($latestVersion)
+					$this->createConstraintFromVersion($latestVersion),
+					$this->getPackageVersions($outdatedPackage)
 				);
 
 				if ($packageToUpdate->needsToUpdate()) {
 					$result[] = $packageToUpdate;
+				}
+			}
+
+			return $result;
+		}
+
+
+		/**
+		 * @return PackageVersion[]
+		 */
+		private function getPackageVersions(Package $package): array
+		{
+			$result = [];
+			$constraint = new \Composer\Semver\Constraint\MultiConstraint([
+				new \Composer\Semver\Constraint\Constraint('>=', $this->versionParser->normalize($package->getCurrentVersion())),
+				new \Composer\Semver\Constraint\Constraint('<=', $this->versionParser->normalize($package->getLatestVersion())),
+			]);
+
+			foreach ($this->composerBridge->getVersions($package->getName()) as $version) {
+				$packageVersion = PackageVersion::create($version, $this->versionParser);
+
+				if ($packageVersion->satisfies($constraint)) {
+					$result[] = $packageVersion;
 				}
 			}
 

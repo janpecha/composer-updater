@@ -19,18 +19,26 @@
 		/** @var \Composer\Semver\Constraint\ConstraintInterface */
 		private $latestVersionConstraint;
 
+		/** @var PackageVersion[] */
+		private $versions;
 
+
+		/**
+		 * @param PackageVersion[] $versions
+		 */
 		public function __construct(
 			Package $package,
 			\Composer\Semver\Constraint\ConstraintInterface $constraint,
 			string $latestVersion,
-			\Composer\Semver\Constraint\ConstraintInterface $latestVersionConstraint
+			\Composer\Semver\Constraint\ConstraintInterface $latestVersionConstraint,
+			array $versions
 		)
 		{
 			$this->package = $package;
 			$this->constraint = $constraint;
 			$this->latestVersion = $latestVersion;
 			$this->latestVersionConstraint = $latestVersionConstraint;
+			$this->versions = $versions;
 		}
 
 
@@ -61,5 +69,14 @@
 		public function needsToUpdate(): bool
 		{
 			return !$this->constraint->matches($this->latestVersionConstraint);
+		}
+
+
+		/**
+		 * @return PackageVersion[]
+		 */
+		public function getVersions(): array
+		{
+			return $this->versions;
 		}
 	}

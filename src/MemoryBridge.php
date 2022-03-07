@@ -103,6 +103,12 @@
 		}
 
 
+		public function getVersions(string $package): array
+		{
+			return array_keys($this->repository[$package]);
+		}
+
+
 		public function runComposerInstall(): void
 		{
 			$this->lockFile = $this->getOrInstallLockFile();
@@ -268,16 +274,6 @@
 			}
 
 			return $wasInstalled;
-		}
-
-
-		/**
-		 * @param  string $package
-		 * @return string[]
-		 */
-		private function getVersions(string $package): array
-		{
-			return array_keys($this->repository[$package]);
 		}
 
 
