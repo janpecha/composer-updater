@@ -159,9 +159,17 @@
 				$name = $outdatedPackage->getName();
 				$this->console->output(' - ', \CzProject\PhpCli\Colors::GRAY);
 				$this->console->output($name, \CzProject\PhpCli\Colors::GREEN);
-
 				$constraint = $outdatedPackage->getConstraint();
-				$newConstraint = $this->createConstraintFromVersion($outdatedPackage->getLatestVersion());
+				$newConstraint = $constraint;
+
+				foreach ($outdatedPackage->getVersions() as $version) {
+					if ($version->satisfies($constraint)) {
+						continue;
+					}
+
+					$newConstraint = $this->createConstraintFromVersion($version->getNormalizedVersion());
+					break;
+				}
 
 				$this->console->output(' => ', \CzProject\PhpCli\Colors::GRAY);
 				$newVersion = $newConstraint->getPrettyString();

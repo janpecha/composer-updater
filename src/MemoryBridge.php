@@ -117,13 +117,15 @@
 
 		public function runComposerUpdate(bool $withAllDependencies): bool
 		{
+			$composerFile = $this->composerFile;
 			$lockFile = $this->getOrInstallLockFile();
 			$wasUpdated = FALSE;
 
 			foreach ($this->composerFile as $packageName => $constraint) {
-				$wasUpdated = $wasUpdated || $this->tryUpdatePackage($lockFile, $packageName, $constraint, $withAllDependencies);
+				$wasUpdated = $wasUpdated || $this->tryUpdatePackage($composerFile, $lockFile, $packageName, $constraint, $withAllDependencies);
 			}
 
+			$this->composerFile = $composerFile;
 			$this->lockFile = $lockFile;
 			return $wasUpdated;
 		}
@@ -141,10 +143,12 @@
 
 		public function tryRequirePackage(string $package, string $constraint, bool $dryRun): bool
 		{
+			$composerFile = $this->composerFile;
 			$lockFile = $this->lockFile !== NULL ? $this->lockFile : [];
-			$wasUpdated = $this->tryUpdatePackage($lockFile, $package, $constraint, TRUE);
+			$wasUpdated = $this->tryUpdatePackage($composerFile, $lockFile, $package, $constraint, TRUE);
 
 			if (!$dryRun) {
+				$this->composerFile = $composerFile;
 				$this->lockFile = $lockFile;
 			}
 
@@ -173,9 +177,11 @@
 
 
 		/**
+		 * @param  array<string, string> &$composerFile
 		 * @param  array<string, string> &$lockFile
 		 */
 		private function tryUpdatePackage(
+			array &$composerFile,
 			array &$lockFile,
 			string $packageName,
 			string $constraint,
@@ -194,7 +200,7 @@
 			foreach ($candidates as $candidate) {
 				foreach ($this->repository[$packageName][$candidate] as $dependency => $dependencyConstraint) {
 					if ($withAllDependencies) {
-						$wasDepUpdated = $this->tryUpdatePackage($lockFile, $dependency, $dependencyConstraint, $withAllDependencies);
+						$wasDepUpdated = $this->tryUpdatePackage($composerFile, $lockFile, $dependency, $dependencyConstraint, $withAllDependencies);
 
 						if (!$wasDepUpdated) { // cannot be updated
 							continue 2;
@@ -210,6 +216,7 @@
 				}
 
 				$lockFile[$packageName] = $candidate;
+				$composerFile[$packageName] = $constraint;
 				break;
 			}
 

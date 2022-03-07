@@ -1,6 +1,5 @@
 <?php
 
-use JP\ComposerUpdater;
 use Tester\Assert;
 
 require __DIR__ . '/../bootstrap.php';
@@ -42,7 +41,6 @@ test('Project update', function () {
 	], $outputProvider);
 
 	Assert::same('v2.4.3', $memoryBridge->getInstalledVersion('org/package1'));
-
 	Assert::same('v0.7.0', $memoryBridge->getInstalledVersion('org/package2'));
 
 	$updater->run(FALSE);
@@ -53,12 +51,41 @@ test('Project update', function () {
 		'Updating project dependencies:',
 		' - running `composer update` [NOTHING TO UPDATE]',
 		'Updating project constraints:',
+		' - org/package2 => ^0.8',
+		'Apply updates:',
+		' - org/package2 => updated to ^0.8',
+		'',
+		'Done.',
+	], $outputProvider);
+
+	Assert::same('v2.4.3', $memoryBridge->getInstalledVersion('org/package1'));
+	Assert::same('v0.8.0', $memoryBridge->getInstalledVersion('org/package2'));
+
+	$updater->run(FALSE);
+	Tests::assertOutput([
+		'Updating project dependencies:',
+		' - running `composer update` [UPDATED]',
+		'Done.',
+		'Updating project dependencies:',
+		' - running `composer update` [NOTHING TO UPDATE]',
+		'Updating project constraints:',
+		' - org/package2 => ^0.8',
+		'Apply updates:',
+		' - org/package2 => updated to ^0.8',
+		'',
+		'Done.',
+		'Updating project dependencies:',
+		' - running `composer update` [NOTHING TO UPDATE]',
+		'Updating project constraints:',
 		' - org/package2 => ^1.0',
 		'Apply updates:',
 		' - org/package2 => updated to ^1.0',
 		'',
 		'Done.',
 	], $outputProvider);
+
+	Assert::same('v2.4.3', $memoryBridge->getInstalledVersion('org/package1'));
+	Assert::same('v1.0.0', $memoryBridge->getInstalledVersion('org/package2'));
 });
 
 
