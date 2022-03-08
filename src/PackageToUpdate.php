@@ -60,12 +60,6 @@
 		}
 
 
-		public function getLatestVersionConstraint(): \Composer\Semver\Constraint\ConstraintInterface
-		{
-			return $this->latestVersionConstraint;
-		}
-
-
 		public function needsToUpdate(): bool
 		{
 			return !$this->constraint->matches($this->latestVersionConstraint);
