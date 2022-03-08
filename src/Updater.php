@@ -89,7 +89,7 @@
 
 					$newConstraint = $this->mergeConstraint(
 						$newConstraint,
-						$this->createConstraintFromVersion($version->getNormalizedVersion())
+						$this->createConstraintFromVersion($version->getNormalizedVersion(), FALSE)
 					);
 				}
 
@@ -167,7 +167,7 @@
 						continue;
 					}
 
-					$newConstraint = $this->createConstraintFromVersion($version->getNormalizedVersion());
+					$newConstraint = $this->createConstraintFromVersion($version->getNormalizedVersion(), TRUE);
 					break;
 				}
 
@@ -228,7 +228,7 @@
 					$outdatedPackage,
 					$this->versionParser->parseConstraints($outdatedPackage->getConstraint()),
 					$latestVersion,
-					$this->createConstraintFromVersion($latestVersion),
+					$this->createConstraintFromVersion($latestVersion, FALSE),
 					$this->getPackageVersions($outdatedPackage)
 				);
 
@@ -307,12 +307,16 @@
 		}
 
 
-		private function createConstraintFromVersion(string $version): \Composer\Semver\Constraint\ConstraintInterface
+		private function createConstraintFromVersion(string $version, bool $forProject): \Composer\Semver\Constraint\ConstraintInterface
 		{
 			$version = Strings::before($version, '.', 2);
 
 			if (!is_string($version)) {
 				throw new \RuntimeException('Invalid version string.');
+			}
+
+			if ($forProject) {
+				return $this->versionParser->parseConstraints('~' . $version . '.0');
 			}
 
 			return $this->versionParser->parseConstraints('^' . $version);
