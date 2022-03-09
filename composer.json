@@ -11,7 +11,7 @@
 	],
 	"require": {
 		"php": ">=7.2.0",
-		"czproject/phpcli": "^4.0",
+		"czproject/phpcli": "^4.1",
 		"nette/utils": "^3.2",
 		"czproject/path-helper": "^4.1",
 		"czproject/assert": "^1.4",

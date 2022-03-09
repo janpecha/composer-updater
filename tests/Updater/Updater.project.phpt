@@ -43,11 +43,9 @@ test('Project update', function () {
 	Assert::same('v2.4.3', $memoryBridge->getInstalledVersion('org/package1'));
 	Assert::same('v0.7.0', $memoryBridge->getInstalledVersion('org/package2'));
 
+	$outputProvider->resetOutput();
 	$updater->run(FALSE);
 	Tests::assertOutput([
-		'Updating project dependencies:',
-		' - running `composer update` [UPDATED]',
-		'Done.',
 		'Updating project dependencies:',
 		' - running `composer update` [NOTHING TO UPDATE]',
 		'Updating project constraints:',
@@ -61,19 +59,9 @@ test('Project update', function () {
 	Assert::same('v2.4.3', $memoryBridge->getInstalledVersion('org/package1'));
 	Assert::same('v0.8.0', $memoryBridge->getInstalledVersion('org/package2'));
 
+	$outputProvider->resetOutput();
 	$updater->run(FALSE);
 	Tests::assertOutput([
-		'Updating project dependencies:',
-		' - running `composer update` [UPDATED]',
-		'Done.',
-		'Updating project dependencies:',
-		' - running `composer update` [NOTHING TO UPDATE]',
-		'Updating project constraints:',
-		' - org/package2 => ~0.8.0',
-		'Apply updates:',
-		' - org/package2 => updated to ~0.8.0',
-		'',
-		'Done.',
 		'Updating project dependencies:',
 		' - running `composer update` [NOTHING TO UPDATE]',
 		'Updating project constraints:',
@@ -122,11 +110,9 @@ test('Tilda update', function () {
 
 	Assert::same('v2.4.1', $memoryBridge->getInstalledVersion('org/package1'));
 
+	$outputProvider->resetOutput();
 	$updater->run(FALSE);
 	Tests::assertOutput([
-		'Updating project dependencies:',
-		' - running `composer update` [UPDATED]',
-		'Done.',
 		'Updating project dependencies:',
 		' - running `composer update` [NOTHING TO UPDATE]',
 		'Updating project constraints:',
@@ -139,19 +125,9 @@ test('Tilda update', function () {
 
 	Assert::same('v2.5.1', $memoryBridge->getInstalledVersion('org/package1'));
 
+	$outputProvider->resetOutput();
 	$updater->run(FALSE);
 	Tests::assertOutput([
-		'Updating project dependencies:',
-		' - running `composer update` [UPDATED]',
-		'Done.',
-		'Updating project dependencies:',
-		' - running `composer update` [NOTHING TO UPDATE]',
-		'Updating project constraints:',
-		' - org/package1 => ~2.5.0',
-		'Apply updates:',
-		' - org/package1 => updated to ~2.5.0',
-		'',
-		'Done.',
 		'Updating project dependencies:',
 		' - running `composer update` [NOTHING TO UPDATE]',
 		'Updating project constraints:',
