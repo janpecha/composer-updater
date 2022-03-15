@@ -81,11 +81,13 @@ test('Conflicts', function () {
 	);
 	$updater = new \JP\ComposerUpdater\Updater($memoryBridge, Tests::createConsole($outputProvider));
 
-	Assert::same('v0.5.0', $memoryBridge->getInstalledVersion('inteve/types'));
-	Assert::same('v2.4.0', $memoryBridge->getInstalledVersion('nette/application'));
-	Assert::same('v2.4.0', $memoryBridge->getInstalledVersion('nette/caching'));
-	Assert::same('v2.4.0', $memoryBridge->getInstalledVersion('nette/robot-loader'));
-	Assert::same('v2.4.0', $memoryBridge->getInstalledVersion('nette/utils'));
+	Assert::same([
+		'inteve/types' => 'v0.5.0',
+		'nette/application' => 'v2.4.0',
+		'nette/caching' => 'v2.4.0',
+		'nette/robot-loader' => 'v2.4.0',
+		'nette/utils' => 'v2.4.0',
+	], $memoryBridge->getInstalledVersions());
 
 	$updater->run(FALSE);
 	Tests::assertOutput([
@@ -94,11 +96,13 @@ test('Conflicts', function () {
 		'Done.',
 	], $outputProvider);
 
-	Assert::same('v0.5.0', $memoryBridge->getInstalledVersion('inteve/types'));
-	Assert::same('v2.4.0', $memoryBridge->getInstalledVersion('nette/application'));
-	Assert::same('v2.5.0', $memoryBridge->getInstalledVersion('nette/caching'));
-	Assert::same('v2.4.0', $memoryBridge->getInstalledVersion('nette/robot-loader'));
-	Assert::same('v2.4.0', $memoryBridge->getInstalledVersion('nette/utils'));
+	Assert::same([
+		'inteve/types' => 'v0.5.0',
+		'nette/application' => 'v2.4.0',
+		'nette/caching' => 'v2.5.0',
+		'nette/robot-loader' => 'v2.4.0',
+		'nette/utils' => 'v2.4.0',
+	], $memoryBridge->getInstalledVersions());
 
 	$outputProvider->resetOutput();
 	$updater->run(FALSE);
@@ -122,10 +126,12 @@ test('Conflicts', function () {
 		'Done.',
 	], $outputProvider);
 
-	Assert::same('v1.0.0', $memoryBridge->getInstalledVersion('inteve/types'));
-	Assert::same('v2.4.0', $memoryBridge->getInstalledVersion('nette/application'));
-	Assert::same('v3.0.0', $memoryBridge->getInstalledVersion('nette/caching'));
-	Assert::same('v3.0.0', $memoryBridge->getInstalledVersion('nette/robot-loader'));
-	Assert::same('v2.4.0', $memoryBridge->getInstalledVersion('nette/utils'));
+	Assert::same([
+		'inteve/types' => 'v1.0.0',
+		'nette/application' => 'v2.4.0',
+		'nette/caching' => 'v3.0.0',
+		'nette/robot-loader' => 'v3.0.0',
+		'nette/utils' => 'v2.4.0',
+	], $memoryBridge->getInstalledVersions());
 
 });

@@ -40,8 +40,10 @@ test('Project update', function () {
 		'Done.',
 	], $outputProvider);
 
-	Assert::same('v2.4.3', $memoryBridge->getInstalledVersion('org/package1'));
-	Assert::same('v0.7.0', $memoryBridge->getInstalledVersion('org/package2'));
+	Assert::same([
+		'org/package1' => 'v2.4.3',
+		'org/package2' => 'v0.7.0',
+	], $memoryBridge->getInstalledVersions());
 
 	$outputProvider->resetOutput();
 	$updater->run(FALSE);
@@ -56,8 +58,10 @@ test('Project update', function () {
 		'Done.',
 	], $outputProvider);
 
-	Assert::same('v2.4.3', $memoryBridge->getInstalledVersion('org/package1'));
-	Assert::same('v0.8.0', $memoryBridge->getInstalledVersion('org/package2'));
+	Assert::same([
+		'org/package1' => 'v2.4.3',
+		'org/package2' => 'v0.8.0',
+	], $memoryBridge->getInstalledVersions());
 
 	$outputProvider->resetOutput();
 	$updater->run(FALSE);
@@ -72,8 +76,11 @@ test('Project update', function () {
 		'Done.',
 	], $outputProvider);
 
-	Assert::same('v2.4.3', $memoryBridge->getInstalledVersion('org/package1'));
-	Assert::same('v1.0.0', $memoryBridge->getInstalledVersion('org/package2'));
+	Assert::same([
+		'org/package1' => 'v2.4.3',
+		'org/package2' => 'v1.0.0',
+	], $memoryBridge->getInstalledVersions());
+
 });
 
 
@@ -99,7 +106,9 @@ test('Tilda update', function () {
 	);
 	$updater = new \JP\ComposerUpdater\Updater($memoryBridge, Tests::createConsole($outputProvider));
 
-	Assert::same('v2.4.0', $memoryBridge->getInstalledVersion('org/package1'));
+	Assert::same([
+		'org/package1' => 'v2.4.0',
+	], $memoryBridge->getInstalledVersions());
 
 	$updater->run(FALSE);
 	Tests::assertOutput([
@@ -108,7 +117,9 @@ test('Tilda update', function () {
 		'Done.',
 	], $outputProvider);
 
-	Assert::same('v2.4.1', $memoryBridge->getInstalledVersion('org/package1'));
+	Assert::same([
+		'org/package1' => 'v2.4.1',
+	], $memoryBridge->getInstalledVersions());
 
 	$outputProvider->resetOutput();
 	$updater->run(FALSE);
@@ -123,7 +134,9 @@ test('Tilda update', function () {
 		'Done.',
 	], $outputProvider);
 
-	Assert::same('v2.5.1', $memoryBridge->getInstalledVersion('org/package1'));
+	Assert::same([
+		'org/package1' => 'v2.5.1',
+	], $memoryBridge->getInstalledVersions());
 
 	$outputProvider->resetOutput();
 	$updater->run(FALSE);
@@ -138,7 +151,9 @@ test('Tilda update', function () {
 		'Done.',
 	], $outputProvider);
 
-	Assert::same('v3.0.0', $memoryBridge->getInstalledVersion('org/package1'));
+	Assert::same([
+		'org/package1' => 'v3.0.0',
+	], $memoryBridge->getInstalledVersions());
 });
 
 

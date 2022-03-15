@@ -169,15 +169,18 @@
 		}
 
 
-		public function getInstalledVersion(string $package): string
+		/**
+		 * @return array<string, string>
+		 */
+		public function getInstalledVersions(): array
 		{
 			if ($this->lockFile === NULL) {
 				throw new \RuntimeException('Missing lock file.');
 			}
 
-			$installedVersion = Arrays::get($this->lockFile, $package);
-			assert(is_string($installedVersion));
-			return $installedVersion;
+			$lockFile = $this->lockFile;
+			ksort($lockFile, SORT_STRING);
+			return $lockFile;
 		}
 
 
