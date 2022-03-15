@@ -119,15 +119,15 @@
 		{
 			$composerFile = $this->composerFile;
 			$lockFile = $this->getOrInstallLockFile();
-			$wasUpdated = FALSE;
+			$newLockFile = $this->tryUpdatePackages($composerFile, $lockFile, $withAllDependencies);
 
-			foreach ($this->composerFile as $packageName => $constraint) {
-				$wasUpdated = $wasUpdated || $this->tryUpdatePackage($composerFile, $lockFile, $packageName, $constraint, $withAllDependencies);
+			if ($newLockFile === NULL) {
+				return FALSE;
 			}
 
 			$this->composerFile = $composerFile;
-			$this->lockFile = $lockFile;
-			return $wasUpdated;
+			$this->lockFile = $newLockFile;
+			return $this->wasLockUpdated($lockFile, $newLockFile);;
 		}
 
 
@@ -144,15 +144,20 @@
 		public function tryRequirePackage(string $package, string $constraint, bool $dryRun): bool
 		{
 			$composerFile = $this->composerFile;
+			$composerFile[$package] = $constraint;
 			$lockFile = $this->lockFile !== NULL ? $this->lockFile : [];
-			$wasUpdated = $this->tryUpdatePackage($composerFile, $lockFile, $package, $constraint, TRUE);
+			$newLockFile = $this->tryUpdatePackages($composerFile, $lockFile, TRUE);
+
+			if ($newLockFile === NULL) {
+				return FALSE;
+			}
 
 			if (!$dryRun) {
 				$this->composerFile = $composerFile;
-				$this->lockFile = $lockFile;
+				$this->lockFile = $newLockFile;
 			}
 
-			return $wasUpdated;
+			return $this->wasLockUpdated($lockFile, $newLockFile);
 		}
 
 
@@ -177,50 +182,143 @@
 
 
 		/**
-		 * @param  array<string, string> &$composerFile
-		 * @param  array<string, string> &$lockFile
+		 * @param  array<string, string> $composerFile
+		 * @param  array<string, string> $lockFile
+		 * @return array<string, string>
 		 */
-		private function tryUpdatePackage(
-			array &$composerFile,
-			array &$lockFile,
-			string $packageName,
-			string $constraint,
+		private function tryUpdatePackages(
+			array $composerFile,
+			array $lockFile,
 			bool $withAllDependencies
-		): bool
+		): ?array
 		{
-			$candidates = \Composer\Semver\Semver::satisfiedBy($this->getVersions($packageName), $constraint);
-			$candidates = \Composer\Semver\Semver::rsort($candidates);
+			$posibilities = [];
+			$packagesToUpdate = array_keys($composerFile);
 
-			if (count($candidates) === 0) {
-				return FALSE;
+			// fill from lock file
+			if (!$withAllDependencies) {
+				foreach ($lockFile as $packageName => $version) {
+					$posibilities[$packageName] = [$version];
+				}
 			}
 
-			$wasUpdated = FALSE;
+			// fill from composer.json
+			foreach ($composerFile as $packageName => $constraint) {
+				$posibilities[$packageName] = \Composer\Semver\Semver::rsort(array_keys($this->repository[$packageName]));
+			}
 
-			foreach ($candidates as $candidate) {
-				foreach ($this->repository[$packageName][$candidate] as $dependency => $dependencyConstraint) {
-					if ($withAllDependencies) {
-						$wasDepUpdated = $this->tryUpdatePackage($composerFile, $lockFile, $dependency, $dependencyConstraint, $withAllDependencies);
+			$posibilities = $this->filterPosibilities($posibilities, $composerFile);
 
-						if (!$wasDepUpdated) { // cannot be updated
-							continue 2;
+			foreach ($packagesToUpdate as $packageName) {
+				if (!isset($posibilities[$packageName]) || count($posibilities[$packageName]) === 0) {
+					return NULL;
+				}
+
+				$wasFound = FALSE;
+
+				foreach ($posibilities[$packageName] as $candidate) {
+					$installed = $this->canBeInstalled($packageName, $candidate, $posibilities);
+
+					if ($installed !== NULL) {
+						$wasFound = TRUE;
+						$posibilities[$packageName] = [$candidate];
+
+						foreach ($installed as $dependend => $dependendPosibilities) {
+							$posibilities[$dependend] = $dependendPosibilities;
 						}
-
-					} elseif (!\Composer\Semver\Semver::satisfies($this->getInstalledVersion($dependency), $dependencyConstraint)) {
-						continue;
 					}
 				}
 
-				if (!isset($lockFile[$packageName]) || $candidate !== $lockFile[$packageName]) {
-					$wasUpdated = TRUE;
+				if (!$wasFound) {
+					return NULL;
 				}
-
-				$lockFile[$packageName] = $candidate;
-				$composerFile[$packageName] = $constraint;
-				break;
 			}
 
-			return $wasUpdated;
+			$newLockFile = [];
+
+			foreach ($posibilities as $packageName => $candidates) {
+				if (count($candidates) === 0) {
+					return NULL;
+				}
+
+				foreach ($candidates as $candidate) {
+					$newLockFile[$packageName] = $candidate;
+					break;
+				}
+			}
+
+			return $newLockFile;
+		}
+
+
+		/**
+		 * @param  array<string, string[]> $posibilities
+		 * @return array<string, string[]>|NULL
+		 */
+		private function canBeInstalled(string $packageName, string $version, array $posibilities): ?array
+		{
+			if (!isset($this->repository[$packageName][$version])) {
+				return NULL;
+			}
+
+			if (isset($posibilities[$packageName]) && !in_array($version, $posibilities[$packageName], TRUE)) {
+				return NULL;
+			}
+
+			$dependencies = $this->repository[$packageName][$version];
+
+			foreach ($dependencies as $dependency => $constraint) {
+				if (!isset($posibilities[$dependency])) {
+					$posibilities[$dependency] = \Composer\Semver\Semver::rsort(array_keys($this->repository[$dependency]));
+				}
+			}
+
+			$posibilities = $this->filterPosibilities($posibilities, $dependencies);
+
+			foreach ($dependencies as $dependency => $constraint) {
+				if (!isset($posibilities[$dependency])) {
+					return NULL;
+				}
+
+				if (count($posibilities[$dependency]) === 0) {
+					return NULL;
+				}
+			}
+
+			return $posibilities;
+		}
+
+
+		/**
+		 * @param  array<string, string[]> $posibilities
+		 * @param  array<string, string> $composerFile
+		 * @return array<string, string[]>
+		 */
+		private function filterPosibilities(
+			array $posibilities,
+			array $composerFile
+		): array
+		{
+			foreach ($composerFile as $packageName => $constraint) {
+				if (!isset($posibilities[$packageName]) || count($posibilities[$packageName]) === 0) {
+					continue;
+				}
+
+				$posibilities[$packageName] = \Composer\Semver\Semver::satisfiedBy($posibilities[$packageName], $constraint);
+			}
+
+			return $posibilities;
+		}
+
+
+		/**
+		 * @param  array<string, string> $old
+		 * @param  array<string, string> $new
+		 */
+		private function wasLockUpdated(array $old, array $new): bool
+		{
+			$diff = array_diff_assoc($old, $new);
+			return count($diff) > 0;
 		}
 
 
