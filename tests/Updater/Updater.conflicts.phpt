@@ -134,4 +134,58 @@ test('Conflicts', function () {
 		'nette/utils' => 'v2.4.0',
 	], $memoryBridge->getInstalledVersions());
 
+	$outputProvider->resetOutput();
+	$updater->run(FALSE);
+	Tests::assertOutput([
+		'Updating project dependencies:',
+		' - running `composer update` [NOTHING TO UPDATE]',
+		'Updating project constraints:',
+		' - inteve/types => ~1.1.0',
+		' - nette/application => ~3.0.0',
+		' - nette/robot-loader => ~3.1.0',
+		' - nette/caching => ~3.1.0',
+		' - nette/utils => ~3.0.0',
+		'Apply updates:',
+		' - inteve/types => updated to ~1.1.0',
+		' - nette/robot-loader => updated to ~3.1.0',
+		' - nette/caching => updated to ~3.1.0',
+		'Some packages was not updated due conflict issues:',
+		' - nette/application => NOT updated to ~3.0.0',
+		' - nette/utils => NOT updated to ~3.0.0',
+		'',
+		'Done.',
+	], $outputProvider);
+
+	Assert::same([
+		'inteve/types' => 'v1.1.0',
+		'nette/application' => 'v2.4.0',
+		'nette/caching' => 'v3.1.0',
+		'nette/robot-loader' => 'v3.1.0',
+		'nette/utils' => 'v2.4.0',
+	], $memoryBridge->getInstalledVersions());
+
+	$outputProvider->resetOutput();
+	$updater->run(FALSE);
+	Tests::assertOutput([
+		'Updating project dependencies:',
+		' - running `composer update` [NOTHING TO UPDATE]',
+		'Updating project constraints:',
+		' - nette/application => ~3.0.0',
+		' - nette/utils => ~3.0.0',
+		'Apply updates:',
+		'Some packages was not updated due conflict issues:',
+		' - nette/application => NOT updated to ~3.0.0',
+		' - nette/utils => NOT updated to ~3.0.0',
+		'',
+		'FAILED.',
+	], $outputProvider);
+
+	Assert::same([
+		'inteve/types' => 'v1.1.0',
+		'nette/application' => 'v2.4.0',
+		'nette/caching' => 'v3.1.0',
+		'nette/robot-loader' => 'v3.1.0',
+		'nette/utils' => 'v2.4.0',
+	], $memoryBridge->getInstalledVersions());
+
 });

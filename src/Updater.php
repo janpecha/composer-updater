@@ -53,7 +53,7 @@
 				$this->console->output('Done.', \CzProject\PhpCli\Colors::GREEN)->nl();
 
 			} else {
-				$this->console->output('Failed.', \CzProject\PhpCli\Colors::RED)->nl();
+				$this->console->output('FAILED.', \CzProject\PhpCli\Colors::RED)->nl();
 			}
 
 			return $result;
