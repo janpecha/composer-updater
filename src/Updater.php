@@ -252,7 +252,10 @@
 				new \Composer\Semver\Constraint\Constraint('<=', $this->versionParser->normalize($package->getLatestVersion())),
 			]);
 
-			foreach ($this->composerBridge->getVersions($package->getName()) as $version) {
+			$versions = $this->composerBridge->getVersions($package->getName());
+			$versions = \Composer\Semver\Semver::sort($versions);
+
+			foreach ($versions as $version) {
 				$packageVersion = PackageVersion::create($version, $this->versionParser);
 
 				if ($packageVersion->satisfies($constraint)) {
