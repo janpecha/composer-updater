@@ -18,7 +18,10 @@ Composer Updater requires PHP 7.2 or later.
 
 ```
 Usage:
-    php composer-updater [options]
+    php composer-updater <command> [options]
+
+Commands:
+	update       Updates composer.json & composer.lock if needed.
 
 Options:
     --composer-file=<path>       Path to composer.json file (optional)

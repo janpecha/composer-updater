@@ -29,7 +29,12 @@ $console->output('JP\\Composer Updater')
 if (!$console->hasParameters()) {
 	$console->output('Usage:')
 		->nl()
-		->output('    php composer-updater [options]')
+		->output('    php composer-updater <command> [options]')
+		->nl()
+		->nl()
+		->output('Commands:')
+		->nl()
+		->output('    update       Updates composer.json & composer.lock if needed.')
 		->nl()
 		->nl()
 		->output('Options:')
@@ -41,50 +46,58 @@ if (!$console->hasParameters()) {
 		->output('    --dry-run                    Enable dry-run mode')
 		->nl()
 		->nl();
-}
 
+} else {
+	$command = $console->getArgument(0)
+		->setDefaultValue('update')
+		->getValue();
 
-if ($composerFile === NULL) {
-	$filesToSearch = [
-		'composer.json',
-		'.data/composer.json',
-	];
-
-	$currentDirectory = $console->getCurrentDirectory();
-
-	foreach ($filesToSearch as $fileToSearch) {
-		if (is_file($currentDirectory . '/' . $fileToSearch)) {
-			$composerFile = $currentDirectory . '/' . $fileToSearch;
-			break;
-		}
+	if ($command !== 'update') {
+		throw new \RuntimeException("Unknow command '$command'.");
 	}
 
-} elseif (!\Nette\Utils\FileSystem::isAbsolute($composerFile)) {
-	$composerFile = $console->getCurrentDirectory() . '/' . $composerFile;
+	if ($composerFile === NULL) {
+		$filesToSearch = [
+			'composer.json',
+			'.data/composer.json',
+		];
+
+		$currentDirectory = $console->getCurrentDirectory();
+
+		foreach ($filesToSearch as $fileToSearch) {
+			if (is_file($currentDirectory . '/' . $fileToSearch)) {
+				$composerFile = $currentDirectory . '/' . $fileToSearch;
+				break;
+			}
+		}
+
+	} elseif (!\Nette\Utils\FileSystem::isAbsolute($composerFile)) {
+		$composerFile = $console->getCurrentDirectory() . '/' . $composerFile;
+	}
+
+	if ($composerFile === NULL) {
+		throw new \RuntimeException('Missing composer.json file, use --composer-file parameter.');
+	}
+
+	if (!is_file($composerFile)) {
+		throw new \RuntimeException('Composer file ' . $composerFile . ' not found.');
+	}
+
+	$bridge = new CliBridge(
+		$composerFile,
+		$console->getOption('composer-bin')
+			->setDefaultValue('composer')
+			->getValue()
+	);
+	$updater = new Updater(
+		$bridge,
+		$console
+	);
+	$ok = $updater->run(
+		$console->getOption('dry-run', 'bool')
+			->setDefaultValue(FALSE)
+			->getValue()
+	);
+
+	exit($ok ? 0 : 1);
 }
-
-if ($composerFile === NULL) {
-	throw new \RuntimeException('Missing composer.json file, use --composer-file parameter.');
-}
-
-if (!is_file($composerFile)) {
-	throw new \RuntimeException('Composer file ' . $composerFile . ' not found.');
-}
-
-$bridge = new CliBridge(
-	$composerFile,
-	$console->getOption('composer-bin')
-		->setDefaultValue('composer')
-		->getValue()
-);
-$updater = new Updater(
-	$bridge,
-	$console
-);
-$ok = $updater->run(
-	$console->getOption('dry-run', 'bool')
-		->setDefaultValue(FALSE)
-		->getValue()
-);
-
-exit($ok ? 0 : 1);
