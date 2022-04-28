@@ -27,7 +27,7 @@
 		{
 			$this->composerFile = ComposerFile::open($composerFile);
 			$this->composerExecutable = $composerExecutable;
-			$this->runner = new \CzProject\Runner\Runner(dirname($this->composerFile->getPath()), FALSE);
+			$this->runner = new \CzProject\Runner\Runner(dirname($this->composerFile->getPath()), \CzProject\Runner\Runner::ERR_DEV_NULL);
 		}
 
 
