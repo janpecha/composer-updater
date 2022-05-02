@@ -113,6 +113,12 @@
 
 		public function runComposerUpdate(bool $withAllDependencies): bool
 		{
+			$this->runner->run([
+				$this->composerExecutable,
+				'update',
+				'--lock',
+			]);
+
 			$result = $this->runner->run([
 				$this->composerExecutable,
 				'update',
