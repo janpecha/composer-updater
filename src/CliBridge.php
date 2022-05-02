@@ -19,6 +19,9 @@
 		/** @var \CzProject\Runner\Runner */
 		private $runner;
 
+		/** @var \CzProject\Runner\Runner */
+		private $stdoutRunner;
+
 
 		public function __construct(
 			string $composerFile,
@@ -27,7 +30,8 @@
 		{
 			$this->composerFile = ComposerFile::open($composerFile);
 			$this->composerExecutable = $composerExecutable;
-			$this->runner = new \CzProject\Runner\Runner(dirname($this->composerFile->getPath()), \CzProject\Runner\Runner::ERR_DEV_NULL);
+			$this->runner = new \CzProject\Runner\Runner(dirname($this->composerFile->getPath()), \CzProject\Runner\Runner::MERGE_OUTPUTS);
+			$this->stdoutRunner = new \CzProject\Runner\Runner(dirname($this->composerFile->getPath()), \CzProject\Runner\Runner::ERR_DEV_NULL);
 		}
 
 
@@ -45,7 +49,7 @@
 
 		public function getOutdated(): array
 		{
-			$result = $this->runner->run([
+			$result = $this->stdoutRunner->run([
 				$this->composerExecutable,
 				'outdated',
 				'--no-plugins',
@@ -78,7 +82,7 @@
 
 		public function getVersions(string $package): array
 		{
-			$result = $this->runner->run([
+			$result = $this->stdoutRunner->run([
 				$this->composerExecutable,
 				'show',
 				$package,
@@ -113,7 +117,7 @@
 
 		public function runComposerUpdate(bool $withAllDependencies): bool
 		{
-			$this->runner->run([
+			$result = $this->runner->run([
 				$this->composerExecutable,
 				'update',
 				'--lock',
