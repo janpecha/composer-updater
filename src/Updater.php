@@ -232,9 +232,7 @@
 					$this->getPackageVersions($outdatedPackage)
 				);
 
-				if ($packageToUpdate->needsToUpdate()) {
-					$result[] = $packageToUpdate;
-				}
+				$result[] = $packageToUpdate;
 			}
 
 			return $result;

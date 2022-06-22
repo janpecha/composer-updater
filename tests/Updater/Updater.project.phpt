@@ -84,6 +84,53 @@ test('Project update', function () {
 });
 
 
+test('Project update (only patches)', function () {
+	$outputProvider = Tests::createConsoleOutput();
+	$memoryBridge = new \JP\ComposerUpdater\MemoryBridge(
+		[
+			'org/package1' => [
+				'v2.4.0' => [],
+				'v2.4.1' => [],
+				'v2.4.2' => [],
+				'v2.4.3' => [],
+			],
+		],
+		'project',
+		[
+			'org/package1' => '^2.4',
+		],
+		[
+			'org/package1' => 'v2.4.2',
+		]
+	);
+	$updater = new \JP\ComposerUpdater\Updater($memoryBridge, Tests::createConsole($outputProvider));
+
+	$updater->run(FALSE);
+	Tests::assertOutput([
+		'Updating project dependencies:',
+		' - running `composer update` [UPDATED]',
+		'Done.',
+	], $outputProvider);
+
+	Assert::same([
+		'org/package1' => 'v2.4.3',
+	], $memoryBridge->getInstalledVersions());
+
+	$outputProvider->resetOutput();
+	$updater->run(FALSE);
+	Tests::assertOutput([
+		'Updating project dependencies:',
+		' - nothing to update.',
+		'Done.',
+	], $outputProvider);
+
+	Assert::same([
+		'org/package1' => 'v2.4.3',
+	], $memoryBridge->getInstalledVersions());
+
+});
+
+
 test('Tilda update', function () {
 	$outputProvider = Tests::createConsoleOutput();
 	$memoryBridge = new \JP\ComposerUpdater\MemoryBridge(
@@ -185,9 +232,9 @@ test('Nothing to update', function () {
 			'org/package3' => '~1.0.0',
 		],
 		[
-			'org/package1' => 'v2.4.2',
-			'org/package2' => 'v0.7.0',
-			'org/package3' => 'v0.7.0',
+			'org/package1' => 'v2.4.3',
+			'org/package2' => 'v1.0.0',
+			'org/package3' => 'v1.0.0',
 		],
 		$outputProvider
 	);
