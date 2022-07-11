@@ -4,6 +4,7 @@
 
 	namespace JP\ComposerUpdater;
 
+	use CzProject\Runner\RunnerResult;
 	use Nette;
 	use Nette\Utils\Arrays;
 
@@ -61,8 +62,7 @@
 				throw new CliRunnerException("Composer outdated failed.", $result);
 			}
 
-			$outdated = Nette\Utils\Json::decode(implode("\n", $result->getOutput()), Nette\Utils\Json::FORCE_ARRAY);
-			assert(is_array($outdated));
+			$outdated = $this->decodeJsonFromResult($result);
 			$result = [];
 
 			foreach (Arrays::get($outdated, 'installed') as $package) {
@@ -94,8 +94,7 @@
 				throw new CliRunnerException("Composer show failed.", $result);
 			}
 
-			$data = Nette\Utils\Json::decode(implode("\n", $result->getOutput()), Nette\Utils\Json::FORCE_ARRAY);
-			assert(is_array($data));
+			$data = $this->decodeJsonFromResult($result);
 			return Arrays::get($data, 'versions');
 		}
 
@@ -171,5 +170,21 @@
 			]);
 
 			return $result->isOk();
+		}
+
+
+		/**
+		 * @return array<string, mixed>
+		 */
+		private function decodeJsonFromResult(RunnerResult $result)
+		{
+			try {
+				$data = Nette\Utils\Json::decode(implode("\n", $result->getOutput()), Nette\Utils\Json::FORCE_ARRAY);
+
+			} catch (\Nette\Utils\JsonException $e) {
+				throw new CliRunnerException($e->getMessage(), $result);
+			}
+
+			return $data;
 		}
 	}
