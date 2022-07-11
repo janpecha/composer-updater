@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 namespace JP\ComposerUpdater;
 
+use CzProject\PhpCli\Colors;
+
 $autoload = is_file(__DIR__ . '/../vendor/autoload.php')
 	? __DIR__ . '/../vendor/autoload.php'
 	: __DIR__ . '/../../../autoload.php';
@@ -93,11 +95,34 @@ if (!$console->hasParameters()) {
 		$bridge,
 		$console
 	);
-	$ok = $updater->run(
-		$console->getOption('dry-run', 'bool')
-			->setDefaultValue(FALSE)
-			->getValue()
-	);
+	$ok = FALSE;
+
+	try {
+		$ok = $updater->run(
+			$console->getOption('dry-run', 'bool')
+				->setDefaultValue(FALSE)
+				->getValue()
+		);
+
+	} catch (CliRunnerException $e) {
+		$console->output('ERROR #' . $e->getCode() . ': ', Colors::RED)
+			->output($e->getMessage())
+			->nl()
+			->output('Command: ', Colors::RED)
+			->output($e->getRunnerResult()->getCommand())
+			->nl()
+			->output('Output:', Colors::RED);
+
+		if ($e->getRunnerResult()->hasOutput()) {
+			$console->nl();
+			$console->output(implode("\n", $e->getRunnerResult()->getOutput()));
+
+		} else {
+			$console->output(' <no output>', Colors::GRAY);
+		}
+
+		$console->nl();
+	}
 
 	exit($ok ? 0 : 1);
 }

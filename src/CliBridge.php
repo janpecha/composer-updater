@@ -58,7 +58,7 @@
 			]);
 
 			if (!$result->isOk()) {
-				throw new \RuntimeException("Composer outdated failed.");
+				throw new CliRunnerException("Composer outdated failed.", $result);
 			}
 
 			$outdated = Nette\Utils\Json::decode(implode("\n", $result->getOutput()), Nette\Utils\Json::FORCE_ARRAY);
@@ -91,7 +91,7 @@
 			]);
 
 			if (!$result->isOk()) {
-				throw new \RuntimeException("Composer show failed.");
+				throw new CliRunnerException("Composer show failed.", $result);
 			}
 
 			$data = Nette\Utils\Json::decode(implode("\n", $result->getOutput()), Nette\Utils\Json::FORCE_ARRAY);
@@ -110,7 +110,7 @@
 			]);
 
 			if (!$result->isOk()) {
-				throw new \RuntimeException("Composer install failed.");
+				throw new CliRunnerException("Composer install failed.", $result);
 			}
 		}
 
@@ -133,7 +133,7 @@
 			]);
 
 			if (!$result->isOk()) {
-				throw new \RuntimeException("Composer update failed.");
+				throw new CliRunnerException("Composer update failed.", $result);
 			}
 
 			return strpos(implode("\n", $result->getOutput()), 'Nothing to install, update or remove') === FALSE;
@@ -153,7 +153,7 @@
 			]);
 
 			if (!$result->isOk()) {
-				throw new \RuntimeException("Composer require for package '$package' failed.");
+				throw new CliRunnerException("Composer require for package '$package' failed.", $result);
 			}
 		}
 
