@@ -65,7 +65,7 @@
 			$outdated = $this->decodeJsonFromResult($result);
 			$result = [];
 
-			foreach (Arrays::get($outdated, 'installed') as $package) {
+			foreach (Arrays::get($outdated, 'installed', []) as $package) {
 				assert(is_array($package));
 				$packageName = Arrays::get($package, 'name');
 				$result[] = new Package(

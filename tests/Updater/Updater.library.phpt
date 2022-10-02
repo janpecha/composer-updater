@@ -72,3 +72,36 @@ test('Nothing to update', function () {
 		'Done.',
 	], $outputProvider);
 });
+
+
+test('No dependencies', function () {
+	$outputProvider = Tests::createConsoleOutput();
+	$updater = Tests::createUpdater(
+		[
+			'org/package1' => [
+				'v2.4.0' => [],
+				'v2.4.1' => [],
+				'v2.4.2' => [],
+				'v2.4.3' => [],
+			],
+			'org/package2' => [
+				'v0.7.0' => [],
+				'v0.8.0' => [],
+				'v1.0.0' => [],
+			],
+		],
+		'library',
+		[
+		],
+		NULL,
+		$outputProvider
+	);
+
+	$updater->run(FALSE);
+	Tests::assertOutput([
+		'Missing composer.lock, running of `composer install`.',
+		'Updating library dependencies:',
+		' - nothing to update.',
+		'Done.',
+	], $outputProvider);
+});
