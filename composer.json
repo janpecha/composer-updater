@@ -26,6 +26,6 @@
 		"classmap": ["src/"]
 	},
 	"scripts": {
-		"phpstan": "phpstan analyse --configuration tests/phpstan.neon"
+		"phpstan": "phpstan analyse"
 	}
 }
