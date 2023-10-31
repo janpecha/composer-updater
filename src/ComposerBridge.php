@@ -16,6 +16,12 @@
 		/**
 		 * @return Package[]
 		 */
+		function getDirectInstalledVersions(): array;
+
+
+		/**
+		 * @return Package[]
+		 */
 		function getOutdated(): array;
 
 

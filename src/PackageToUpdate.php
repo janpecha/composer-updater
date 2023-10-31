@@ -48,6 +48,12 @@
 		}
 
 
+		public function getCurrentVersion(): string
+		{
+			return $this->package->getCurrentVersion();
+		}
+
+
 		public function getConstraint(): \Composer\Semver\Constraint\ConstraintInterface
 		{
 			return $this->constraint;

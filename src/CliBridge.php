@@ -48,6 +48,39 @@
 		}
 
 
+		public function getDirectInstalledVersions(): array
+		{
+			$result = $this->stdoutRunner->run([
+				$this->composerExecutable,
+				'show',
+				'--no-interaction',
+				'--no-plugins',
+				'--direct',
+				'--format=json'
+			]);
+
+			if (!$result->isOk()) {
+				throw new CliRunnerException("Composer show failed.", $result);
+			}
+
+			$installed = $this->decodeJsonFromResult($result);
+			$result = [];
+
+			foreach (Arrays::get($installed, 'installed', []) as $package) {
+				assert(is_array($package));
+				$packageName = Arrays::get($package, 'name');
+				$result[] = new Package(
+					$packageName,
+					$this->composerFile->getPackageConstraint($packageName),
+					Arrays::get($package, 'version'),
+					Arrays::get($package, 'version')
+				);
+			}
+
+			return $result;
+		}
+
+
 		public function getOutdated(): array
 		{
 			$result = $this->stdoutRunner->run([
@@ -155,6 +188,8 @@
 			if (!$result->isOk()) {
 				throw new CliRunnerException("Composer require for package '$package' failed.", $result);
 			}
+
+			$this->composerFile = ComposerFile::open($this->composerFile->getPath());
 		}
 
 

@@ -35,7 +35,9 @@ test('Project update', function () {
 
 	$updater->run(FALSE);
 	Tests::assertOutput([
-		'Updating project dependencies:',
+		'Stabilization of project constraints:',
+		' - org/package1 => ~2.4.0',
+		' - org/package2 => ~0.7.0',
 		' - running `composer update` [UPDATED]',
 		'Done.',
 	], $outputProvider);
@@ -107,7 +109,8 @@ test('Project update (only patches)', function () {
 
 	$updater->run(FALSE);
 	Tests::assertOutput([
-		'Updating project dependencies:',
+		'Stabilization of project constraints:',
+		' - org/package1 => ~2.4.0',
 		' - running `composer update` [UPDATED]',
 		'Done.',
 	], $outputProvider);
@@ -239,6 +242,16 @@ test('Nothing to update', function () {
 		$outputProvider
 	);
 
+	$updater->run(FALSE);
+	Tests::assertOutput([
+		'Stabilization of project constraints:',
+		' - org/package1 => ~2.4.0',
+		' - org/package2 => ~1.0.0',
+		' - running `composer update` [UPDATED]',
+		'Done.',
+	], $outputProvider);
+
+	$outputProvider->resetOutput();
 	$updater->run(FALSE);
 	Tests::assertOutput([
 		'Updating project dependencies:',

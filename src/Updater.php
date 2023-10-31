@@ -119,11 +119,58 @@
 		private function updateProject(bool $dryRun): bool
 		{
 			$this->tryComposerInstall($dryRun);
+			$toStabilize = [];
 
-			$this->console->output('Updating project dependencies:')->nl();
+			foreach ($this->composerBridge->getDirectInstalledVersions() as $installedPackage) {
+				$constraint = $this->versionParser->parseConstraints($installedPackage->getConstraint());
+				$currentVersion = $this->versionParser->normalize($installedPackage->getCurrentVersion());
+				$newConstraint = $this->createConstraintFromVersion($currentVersion, TRUE);
+				$newVersion = $newConstraint->getPrettyString();
+
+				if ($constraint->getPrettyString() !== $newVersion) {
+					$toStabilize[$installedPackage->getName()] = $newVersion;
+				}
+			}
+
+			if (count($toStabilize) > 0) {
+				$this->console->output('Stabilization of project constraints:')->nl();
+
+				foreach ($toStabilize as $packageName => $newConstraint) {
+					$this->console->output(' - ', \CzProject\PhpCli\Colors::GRAY);
+					$this->console->output($packageName, \CzProject\PhpCli\Colors::GREEN);
+					$this->console->output(' => ', \CzProject\PhpCli\Colors::GRAY);
+					$this->console->output($newConstraint);
+					$this->console->nl();
+
+					if (!$dryRun) {
+						$this->composerBridge->requirePackageWithoutUpdate($packageName, $newConstraint);
+					}
+				}
+
+				$this->console->output(' - ', \CzProject\PhpCli\Colors::GRAY);
+				$this->console->output('running `composer update`', \CzProject\PhpCli\Colors::GREEN);
+
+				if (!$dryRun) {
+					try {
+						$this->composerBridge->runComposerUpdate(FALSE);
+						$this->console->output(' [UPDATED]');
+
+					} catch (\RuntimeException $e) {
+						$this->console->output(' [FAILED]', \CzProject\PhpCli\Colors::RED);
+					}
+
+					$this->console->nl();
+					return TRUE;
+
+				} else {
+					$this->console->output(' [DRY RUN]')->nl();
+				}
+			}
+
 			$outdated = $this->getOutdatedPackages();
 
 			if (count($outdated) === 0) {
+				$this->console->output('Updating project dependencies:')->nl();
 				$this->console->output(' - ', \CzProject\PhpCli\Colors::GRAY);
 				$this->console->output('nothing to update.', \CzProject\PhpCli\Colors::YELLOW);
 				$this->console->nl();
@@ -131,6 +178,7 @@
 			}
 
 			if (!$dryRun) {
+				$this->console->output('Updating project dependencies:')->nl();
 				$this->console->output(' - ', \CzProject\PhpCli\Colors::GRAY);
 				$this->console->output('running `composer update`', \CzProject\PhpCli\Colors::GREEN);
 				$wasUpdated = FALSE;
@@ -141,7 +189,6 @@
 				} catch (\RuntimeException $e) {
 					$this->console->output(' [FAILED]', \CzProject\PhpCli\Colors::RED);
 				}
-
 
 				if ($wasUpdated) {
 					$this->console->output(' [UPDATED]')->nl();

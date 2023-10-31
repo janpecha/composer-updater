@@ -83,6 +83,31 @@
 		}
 
 
+		public function getDirectInstalledVersions(): array
+		{
+			if ($this->lockFile === NULL) {
+				return [];
+			}
+
+			$result = [];
+
+			foreach ($this->lockFile as $packageName => $currentVersion) {
+				if (!isset($this->composerFile[$packageName])) {
+					continue;
+				}
+
+				$result[] = new Package(
+					$packageName,
+					$this->getPackageConstraint($packageName),
+					$currentVersion,
+					$currentVersion
+				);
+			}
+
+			return $result;
+		}
+
+
 		public function getOutdated(): array
 		{
 			if ($this->lockFile === NULL) {
