@@ -5,7 +5,7 @@
 	namespace JP\ComposerUpdater;
 
 
-	interface IComposerBridge
+	interface ComposerBridge
 	{
 		function getType(): string;
 

@@ -8,7 +8,7 @@
 	use Nette\Utils\Arrays;
 
 
-	class MemoryBridge implements IComposerBridge
+	class MemoryBridge implements ComposerBridge
 	{
 		/** @var array<string, array<string, array<string, string>>> */
 		private $repository = [];

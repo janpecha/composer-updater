@@ -9,7 +9,7 @@
 	use Nette\Utils\Arrays;
 
 
-	class CliBridge implements IComposerBridge
+	class CliBridge implements ComposerBridge
 	{
 		/** @var ComposerFile */
 		private $composerFile;

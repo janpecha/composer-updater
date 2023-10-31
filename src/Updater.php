@@ -9,7 +9,7 @@
 
 	class Updater
 	{
-		/** @var IComposerBridge */
+		/** @var ComposerBridge */
 		private $composerBridge;
 
 		/** @var \CzProject\PhpCli\Console */
@@ -20,7 +20,7 @@
 
 
 		public function __construct(
-			IComposerBridge $composerBridge,
+			ComposerBridge $composerBridge,
 			\CzProject\PhpCli\Console $console
 		)
 		{
