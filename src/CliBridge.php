@@ -119,6 +119,7 @@
 			$result = $this->runner->run([
 				$this->composerExecutable,
 				'update',
+				'--no-interaction',
 				'--lock',
 			]);
 
