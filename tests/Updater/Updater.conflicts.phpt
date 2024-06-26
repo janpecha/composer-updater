@@ -98,7 +98,6 @@ test('Conflicts', function () {
 		' - nette/caching => ~2.4.0',
 		' - nette/robot-loader => ~2.4.0',
 		' - nette/utils => ~2.4.0',
-		' - running `composer update` [UPDATED]',
 		'Done.',
 	], $outputProvider);
 

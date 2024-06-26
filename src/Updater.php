@@ -147,24 +147,7 @@
 					}
 				}
 
-				$this->console->output(' - ', \CzProject\PhpCli\Colors::GRAY);
-				$this->console->output('running `composer update`', \CzProject\PhpCli\Colors::GREEN);
-
-				if (!$dryRun) {
-					try {
-						$this->composerBridge->runComposerUpdate(FALSE);
-						$this->console->output(' [UPDATED]');
-
-					} catch (\RuntimeException $e) {
-						$this->console->output(' [FAILED]', \CzProject\PhpCli\Colors::RED);
-					}
-
-					$this->console->nl();
-					return TRUE;
-
-				} else {
-					$this->console->output(' [DRY RUN]')->nl();
-				}
+				return TRUE;
 			}
 
 			$outdated = $this->getOutdatedPackages();
