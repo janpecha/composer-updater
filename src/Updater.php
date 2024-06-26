@@ -119,34 +119,8 @@
 		private function updateProject(bool $dryRun): bool
 		{
 			$this->tryComposerInstall($dryRun);
-			$toStabilize = [];
 
-			foreach ($this->composerBridge->getDirectInstalledVersions() as $installedPackage) {
-				$constraint = $this->versionParser->parseConstraints($installedPackage->getConstraint());
-				$currentVersion = $this->versionParser->normalize($installedPackage->getCurrentVersion());
-				$newConstraint = $this->createConstraintFromVersion($currentVersion, TRUE);
-				$newVersion = $newConstraint->getPrettyString();
-
-				if ($constraint->getPrettyString() !== $newVersion) {
-					$toStabilize[$installedPackage->getName()] = $newVersion;
-				}
-			}
-
-			if (count($toStabilize) > 0) {
-				$this->console->output('Stabilization of project constraints:')->nl();
-
-				foreach ($toStabilize as $packageName => $newConstraint) {
-					$this->console->output(' - ', \CzProject\PhpCli\Colors::GRAY);
-					$this->console->output($packageName, \CzProject\PhpCli\Colors::GREEN);
-					$this->console->output(' => ', \CzProject\PhpCli\Colors::GRAY);
-					$this->console->output($newConstraint);
-					$this->console->nl();
-
-					if (!$dryRun) {
-						$this->composerBridge->requirePackageWithoutUpdate($packageName, $newConstraint);
-					}
-				}
-
+			if ($this->stabilizateInstalledConstraints('Stabilization of project constraints', $dryRun)) {
 				return TRUE;
 			}
 
@@ -175,6 +149,7 @@
 
 				if ($wasUpdated) {
 					$this->console->output(' [UPDATED]')->nl();
+					$this->stabilizateInstalledConstraints('Bump of project constraints', $dryRun);
 					return TRUE;
 
 				} else {
@@ -236,10 +211,58 @@
 					$this->console->nl();
 					return FALSE;
 				}
+
+				$this->stabilizateInstalledConstraints('Bump of project constraints', $dryRun);
 			}
 
 			$this->console->nl();
 			return TRUE;
+		}
+
+
+		private function stabilizateInstalledConstraints(
+			string $message,
+			bool $dryRun
+		): bool
+		{
+			$toStabilize = [];
+
+			foreach ($this->composerBridge->getDirectInstalledVersions() as $installedPackage) {
+				$installedPackageConstraint = $installedPackage->getConstraint();
+
+				if (Strings::contains($installedPackageConstraint, '#') || Strings::contains($installedPackageConstraint, '@')) { // stable flag or hash
+					continue;
+				}
+
+				$constraint = $this->versionParser->parseConstraints($installedPackageConstraint);
+				$currentVersion = $this->versionParser->normalize($installedPackage->getCurrentVersion());
+				$newConstraint = $this->createConstraintFromVersion($currentVersion, TRUE);
+				$newVersion = $newConstraint->getPrettyString();
+
+				if ($constraint->getPrettyString() !== $newVersion) {
+					$toStabilize[$installedPackage->getName()] = $newVersion;
+				}
+			}
+
+			if (count($toStabilize) > 0) {
+				$this->console->output($message . ':')->nl();
+
+				foreach ($toStabilize as $packageName => $newConstraint) {
+					$this->console->output(' - ', \CzProject\PhpCli\Colors::GRAY);
+					$this->console->output($packageName, \CzProject\PhpCli\Colors::GREEN);
+					$this->console->output(' => ', \CzProject\PhpCli\Colors::GRAY);
+					$this->console->output($newConstraint);
+					$this->console->nl();
+
+					if (!$dryRun) {
+						$this->composerBridge->requirePackageWithoutUpdate($packageName, $newConstraint);
+					}
+				}
+
+				return TRUE;
+			}
+
+			return FALSE;
 		}
 
 
@@ -340,14 +363,14 @@
 
 		private function createConstraintFromVersion(string $version, bool $forProject): \Composer\Semver\Constraint\ConstraintInterface
 		{
-			$version = Strings::before($version, '.', 2);
+			$version = Strings::before($version, '.', $forProject ? 3 : 2);
 
 			if (!is_string($version)) {
 				throw new \RuntimeException('Invalid version string.');
 			}
 
 			if ($forProject) {
-				return $this->versionParser->parseConstraints('~' . $version . '.0');
+				return $this->versionParser->parseConstraints('~' . $version);
 			}
 
 			return $this->versionParser->parseConstraints('^' . $version);

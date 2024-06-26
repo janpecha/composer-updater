@@ -36,7 +36,7 @@ test('Project update', function () {
 	$updater->run(FALSE);
 	Tests::assertOutput([
 		'Stabilization of project constraints:',
-		' - org/package1 => ~2.4.0',
+		' - org/package1 => ~2.4.2',
 		' - org/package2 => ~0.7.0',
 		'Done.',
 	], $outputProvider);
@@ -51,6 +51,8 @@ test('Project update', function () {
 	Tests::assertOutput([
 		'Updating project dependencies:',
 		' - running `composer update` [UPDATED]',
+		'Bump of project constraints:',
+		' - org/package1 => ~2.4.3',
 		'Done.',
 	], $outputProvider);
 
@@ -122,7 +124,7 @@ test('Project update (only patches)', function () {
 	$updater->run(FALSE);
 	Tests::assertOutput([
 		'Stabilization of project constraints:',
-		' - org/package1 => ~2.4.0',
+		' - org/package1 => ~2.4.2',
 		'Done.',
 	], $outputProvider);
 
@@ -135,6 +137,8 @@ test('Project update (only patches)', function () {
 	Tests::assertOutput([
 		'Updating project dependencies:',
 		' - running `composer update` [UPDATED]',
+		'Bump of project constraints:',
+		' - org/package1 => ~2.4.3',
 		'Done.',
 	], $outputProvider);
 
@@ -187,6 +191,8 @@ test('Tilda update', function () {
 	Tests::assertOutput([
 		'Updating project dependencies:',
 		' - running `composer update` [UPDATED]',
+		'Bump of project constraints:',
+		' - org/package1 => ~2.4.1',
 		'Done.',
 	], $outputProvider);
 
@@ -203,6 +209,8 @@ test('Tilda update', function () {
 		' - org/package1 => ~2.5.0',
 		'Apply updates:',
 		' - org/package1 => updated to ~2.5.0',
+		'Bump of project constraints:',
+		' - org/package1 => ~2.5.1',
 		'',
 		'Done.',
 	], $outputProvider);
@@ -268,7 +276,7 @@ test('Nothing to update', function () {
 	$updater->run(FALSE);
 	Tests::assertOutput([
 		'Stabilization of project constraints:',
-		' - org/package1 => ~2.4.0',
+		' - org/package1 => ~2.4.3',
 		' - org/package2 => ~1.0.0',
 		'Done.',
 	], $outputProvider);
