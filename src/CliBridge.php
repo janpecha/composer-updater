@@ -189,6 +189,17 @@
 				throw new CliRunnerException("Composer require for package '$package' failed.", $result);
 			}
 
+			$result = $this->runner->run([
+				$this->composerExecutable,
+				'update',
+				'--no-interaction',
+				'--lock',
+			]);
+
+			if (!$result->isOk()) {
+				throw new CliRunnerException("Composer 'update --lock' after requiring of package '$package' failed.", $result);
+			}
+
 			$this->composerFile = ComposerFile::open($this->composerFile->getPath());
 		}
 
