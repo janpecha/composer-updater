@@ -307,6 +307,10 @@
 			$versions = \Composer\Semver\Semver::sort($versions);
 
 			foreach ($versions as $version) {
+				if (Strings::startsWith($version, 'dev-') || Strings::endsWith($version, '-dev')) {
+					continue;
+				}
+
 				$packageVersion = PackageVersion::create($version, $this->versionParser);
 
 				if ($packageVersion->satisfies($constraint)) {

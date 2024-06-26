@@ -289,3 +289,44 @@ test('Nothing to update', function () {
 		'Done.',
 	], $outputProvider);
 });
+
+
+test('Branch aliases', function () {
+	$outputProvider = Tests::createConsoleOutput();
+	$updater = Tests::createUpdater(
+		[
+			'org/package1' => [
+				'v2.9.2' => [],
+				'v2.9.3' => [],
+				'v2.x-dev' => [],
+				'v3.0.0' => [],
+				'v3.0.1' => [],
+				'v3.1.0' => [],
+				'v3.1.1' => [],
+			],
+		],
+		'project',
+		[
+			'org/package1' => '~2.9.3',
+		],
+		[
+			'org/package1' => 'v2.9.3',
+		],
+		$outputProvider
+	);
+
+	$outputProvider->resetOutput();
+	$updater->run(FALSE);
+	Tests::assertOutput([
+		'Updating project dependencies:',
+		' - running `composer update` [NOTHING TO UPDATE]',
+		'Updating project constraints:',
+		' - org/package1 => ~3.0.0',
+		'Apply updates:',
+		' - org/package1 => updated to ~3.0.0',
+		'Bump of project constraints:',
+		' - org/package1 => ~3.0.1',
+		'',
+		'Done.',
+	], $outputProvider);
+});
